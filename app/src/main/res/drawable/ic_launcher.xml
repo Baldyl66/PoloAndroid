@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icône pour les anciens Android (avant 8.0) : fond arrondi + disque -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><inset android:inset="6dp"><shape android:shape="rectangle"><corners android:radius="22dp" /><gradient android:angle="315" android:startColor="#2B1055" android:centerColor="#C2417A" android:endColor="#FFB27B" /></shape></inset></item>
+    <item android:drawable="@drawable/ic_launcher_fg" />
+</layer-list>

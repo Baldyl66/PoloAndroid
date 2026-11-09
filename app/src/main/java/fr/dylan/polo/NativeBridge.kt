@@ -1,0 +1,492 @@
+package fr.dylan.polo
+
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.os.Bundle
+import android.provider.Settings
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.provider.CallLog
+import android.provider.ContactsContract.CommonDataKinds.Phone
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * Pont entre l'interface (JavaScript : window.PoloNative) et l'autoradio Android.
+ * Toutes les méthodes renvoient du texte JSON pour rester simples côté JavaScript.
+ */
+class NativeBridge(private val act: MainActivity, private val web: WebView) {
+
+    val audioCoord = AudioCoordinator(act) { state, number ->
+        val j = JSONObject().put("state", state)
+        if (!number.isNullOrBlank()) j.put("number", number).put("name", PhoneHub.nameFor(number) ?: number)
+        emit("call", j.toString())
+    }.also { it.start() }
+
+    private val main = Handler(Looper.getMainLooper())
+
+    /** Envoie un évènement à l'interface : window.PoloNativeEvent(type, données). */
+    fun emit(type: String, json: String) {
+        main.post {
+            web.evaluateJavascript("window.PoloNativeEvent&&window.PoloNativeEvent(${JSONObject.quote(type)},$json)", null)
+        }
+    }
+
+    private fun has(p: String) = act.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
+
+    // ---------- général ----------
+
+    @JavascriptInterface
+    fun version(): String = "1.1"
+
+    @JavascriptInterface
+    fun permissionsJson(): String = JSONObject()
+        .put("location", has(Manifest.permission.ACCESS_FINE_LOCATION))
+        .put("contacts", has(Manifest.permission.READ_CONTACTS))
+        .put("calllog", has(Manifest.permission.READ_CALL_LOG))
+        .put("call", has(Manifest.permission.CALL_PHONE))
+        .put("media", MediaHub.hasAccess(act))
+        .put("mic", has(Manifest.permission.RECORD_AUDIO))
+        .put("speech", SpeechRecognizer.isRecognitionAvailable(act))
+        .toString()
+
+    @JavascriptInterface
+    fun requestPermissions() {
+        main.post { act.requestAppPermissions() }
+    }
+
+    /** Ouvre une application installée (Spotify, Deezer…). Renvoie false si elle n'est pas installée. */
+    @JavascriptInterface
+    fun openApp(pkg: String): Boolean {
+        val intent = act.packageManager.getLaunchIntentForPackage(pkg) ?: return false
+        main.post {
+            try {
+                act.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+            }
+        }
+        return true
+    }
+
+    /** Ouvre une adresse dans le navigateur (connexion Spotify). */
+    @JavascriptInterface
+    fun openUrl(url: String) {
+        main.post {
+            try {
+                act.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+            }
+        }
+    }
+
+    /** Adresse de retour Spotify reçue au lancement de l'application (si elle était fermée). */
+    @Volatile var pendingAuthUrl: String? = null
+
+    // ---------- appels et messages ----------
+
+    @JavascriptInterface fun answerCall(): Boolean = PhoneHub.answer()
+    @JavascriptInterface fun hangupCall(): Boolean = PhoneHub.hangup()
+    @JavascriptInterface fun messages(): String = PhoneHub.conversationsJson()
+    @JavascriptInterface fun markRead(key: String) = PhoneHub.markRead(key)
+    @JavascriptInterface fun sendSms(key: String, text: String): String = PhoneHub.reply(key, text)
+
+    /** Dernier plantage enregistré (vide s'il n'y en a pas). */
+    @JavascriptInterface
+    fun crashLog(): String = try {
+        java.io.File(act.filesDir, "crash.log").takeIf { it.exists() }?.readText()?.take(4000) ?: ""
+    } catch (e: Exception) { "" }
+
+    @JavascriptInterface
+    fun clearCrashLog() {
+        try { java.io.File(act.filesDir, "crash.log").delete() } catch (e: Exception) {}
+    }
+
+    @JavascriptInterface
+    fun takeAuthUrl(): String {
+        val u = pendingAuthUrl ?: ""
+        pendingAuthUrl = null
+        return u
+    }
+
+    @JavascriptInterface
+    fun isInstalled(pkg: String): Boolean = act.packageManager.getLaunchIntentForPackage(pkg) != null
+
+    // ---------- musique ----------
+
+    @JavascriptInterface
+    fun media(): String = MediaHub.stateJson()
+
+    @JavascriptInterface
+    fun openMediaAccess() {
+        main.post {
+            try {
+                act.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+            } catch (e: Exception) {
+            }
+        }
+    }
+
+    @JavascriptInterface fun play() { MediaHub.play() }
+    @JavascriptInterface fun pause() { MediaHub.pause() }
+    @JavascriptInterface fun next() { MediaHub.next() }
+    @JavascriptInterface fun previous() { MediaHub.previous() }
+    @JavascriptInterface fun seek(ms: Double) { MediaHub.seek(ms.toLong()) }
+
+    fun maybeAskMediaAccessOnce() {
+        val prefs = MainActivity.prefs(act)
+        if (!MediaHub.hasAccess(act) && !prefs.getBoolean("askedMedia", false)) {
+            prefs.edit().putBoolean("askedMedia", true).apply()
+            // Laisse le temps aux autorisations classiques de s'afficher d'abord.
+            main.postDelayed({ openMediaAccess() }, 6000)
+        }
+    }
+
+    // ---------- contacts & appels ----------
+
+    private fun typeLabel(t: Int) = when (t) {
+        Phone.TYPE_MOBILE -> "Mobile"
+        Phone.TYPE_HOME -> "Domicile"
+        Phone.TYPE_WORK -> "Travail"
+        else -> "Autre"
+    }
+
+    @JavascriptInterface
+    fun contacts(): String {
+        val arr = JSONArray()
+        if (!has(Manifest.permission.READ_CONTACTS)) return arr.toString()
+        val cursor = try {
+            act.contentResolver.query(
+                Phone.CONTENT_URI,
+                arrayOf(Phone.DISPLAY_NAME, Phone.NUMBER, Phone.STARRED, Phone.TYPE),
+                null, null,
+                Phone.DISPLAY_NAME + " COLLATE NOCASE ASC"
+            )
+        } catch (e: Exception) {
+            null
+        } ?: return arr.toString()
+        val seen = HashSet<String>()
+        try {
+            while (cursor.moveToNext() && arr.length() < 800) {
+                val name = cursor.getString(0) ?: ""
+                val number = cursor.getString(1) ?: ""
+                if (number.isBlank()) continue
+                val key = name + "|" + number.filter { it.isDigit() }
+                if (!seen.add(key)) continue
+                arr.put(
+                    JSONObject()
+                        .put("name", name.ifBlank { number })
+                        .put("number", number)
+                        .put("starred", cursor.getInt(2) == 1)
+                        .put("type", typeLabel(cursor.getInt(3)))
+                )
+            }
+        } finally {
+            cursor.close()
+        }
+        return arr.toString()
+    }
+
+    @JavascriptInterface
+    fun callLog(): String {
+        val arr = JSONArray()
+        if (!has(Manifest.permission.READ_CALL_LOG)) return arr.toString()
+        val cursor = try {
+            act.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.CACHED_NAME, CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE),
+                null, null,
+                CallLog.Calls.DATE + " DESC"
+            )
+        } catch (e: Exception) {
+            null
+        } ?: return arr.toString()
+        try {
+            while (cursor.moveToNext() && arr.length() < 40) {
+                val number = cursor.getString(1) ?: ""
+                val name = cursor.getString(0)
+                val kind = when (cursor.getInt(2)) {
+                    CallLog.Calls.OUTGOING_TYPE -> "out"
+                    CallLog.Calls.MISSED_TYPE, CallLog.Calls.REJECTED_TYPE -> "missed"
+                    else -> "in"
+                }
+                arr.put(
+                    JSONObject()
+                        .put("name", if (name.isNullOrBlank()) number else name)
+                        .put("number", number)
+                        .put("kind", kind)
+                        .put("date", cursor.getLong(3))
+                )
+            }
+        } finally {
+            cursor.close()
+        }
+        return arr.toString()
+    }
+
+    /** Lance un vrai appel ; sur l'autoradio il passe par le téléphone connecté en Bluetooth. */
+    @JavascriptInterface
+    fun call(number: String) {
+        if (number.isBlank()) return
+        main.post {
+            val uri = Uri.fromParts("tel", number, null)
+            val action = if (has(Manifest.permission.CALL_PHONE)) Intent.ACTION_CALL else Intent.ACTION_DIAL
+            try {
+                act.startActivity(Intent(action, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+                try {
+                    act.startActivity(Intent(Intent.ACTION_DIAL, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (e2: Exception) {
+                }
+            }
+        }
+    }
+    // ---------- assistant vocal : reconnaissance ----------
+
+    private var recognizer: SpeechRecognizer? = null
+
+    @JavascriptInterface
+    fun canListen(): Boolean = SpeechRecognizer.isRecognitionAvailable(act)
+
+    /** Écoute une phrase en français. Évènements « speech » : start, rms, partial, final, error. */
+    @JavascriptInterface
+    fun listen() {
+        main.post {
+            if (!has(Manifest.permission.RECORD_AUDIO)) {
+                act.requestAppPermissions()
+                emit("speech", JSONObject().put("type", "error").put("code", "permission").toString())
+                return@post
+            }
+            if (!SpeechRecognizer.isRecognitionAvailable(act)) {
+                emit("speech", JSONObject().put("type", "error").put("code", "unavailable").toString())
+                return@post
+            }
+            recognizer?.destroy()
+            val r = SpeechRecognizer.createSpeechRecognizer(act)
+            recognizer = r
+            r.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) = emit("speech", "{\"type\":\"start\"}")
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) = emit("speech", "{\"type\":\"rms\",\"level\":$rmsdB}")
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+                override fun onError(error: Int) {
+                    val code = when (error) {
+                        SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "nomatch"
+                        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network"
+                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "permission"
+                        else -> "error"
+                    }
+                    emit("speech", JSONObject().put("type", "error").put("code", code).toString())
+                }
+                override fun onResults(results: Bundle?) {
+                    val t = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                    emit("speech", JSONObject().put("type", "final").put("text", t).toString())
+                }
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val t = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: return
+                    emit("speech", JSONObject().put("type", "partial").put("text", t).toString())
+                }
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
+                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            r.startListening(intent)
+        }
+    }
+
+    @JavascriptInterface
+    fun stopListening() {
+        main.post { recognizer?.cancel() }
+    }
+
+    // ---------- assistant vocal : lecture à voix haute ----------
+
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private var pendingSpeech: String? = null
+
+    private fun ensureTts() {
+        if (tts != null) return
+        tts = TextToSpeech(act) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            if (ttsReady) {
+                tts?.language = Locale.FRANCE
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {}
+                    override fun onDone(utteranceId: String?) = ttsFinished(utteranceId)
+                    @Deprecated("Deprecated in Java")
+                    override fun onError(utteranceId: String?) = ttsFinished(utteranceId)
+                })
+                pendingSpeech?.let { speakNow(it, pendingNav) }
+            } else {
+                emit("tts", "{\"type\":\"done\"}")
+            }
+            pendingSpeech = null
+        }
+    }
+
+    private var pendingNav = false
+
+    private fun ttsFinished(id: String?) {
+        main.post { audioCoord.abandonFocus() }
+        emit("tts", JSONObject().put("type", "done").put("id", id ?: "").toString())
+    }
+
+    private fun speakNow(text: String, nav: Boolean) {
+        val mode = MainActivity.prefs(act).getString("guidanceMode", "pause") ?: "pause"
+        audioCoord.requestFocus(if (nav) mode else "pause", nav)
+        tts?.setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(if (nav) AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE else AudioAttributes.USAGE_ASSISTANT)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+        )
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, if (nav) "nav" else "msg")
+    }
+
+    private fun speakAny(text: String, nav: Boolean) {
+        main.post {
+            ensureTts()
+            if (ttsReady) speakNow(text, nav) else {
+                pendingSpeech = text
+                pendingNav = nav
+            }
+        }
+    }
+
+    /** Lit un message à voix haute (la musique se met en pause pendant la lecture). */
+    @JavascriptInterface
+    fun speak(text: String) = speakAny(text, false)
+
+    /** Annonce du GPS (la musique baisse ou se met en pause selon le réglage). */
+    @JavascriptInterface
+    fun speakNav(text: String) = speakAny(text, true)
+
+    /** "duck" = baisser la musique, "pause" = la mettre en pause pendant les annonces. */
+    @JavascriptInterface
+    fun setGuidanceMode(mode: String) {
+        MainActivity.prefs(act).edit().putString("guidanceMode", if (mode == "duck") "duck" else "pause").apply()
+    }
+
+    @JavascriptInterface
+    fun getGuidanceMode(): String = MainActivity.prefs(act).getString("guidanceMode", "pause") ?: "pause"
+
+    // ---------- démarrage automatique ----------
+
+    @JavascriptInterface
+    fun getAutostart(): Boolean = MainActivity.prefs(act).getBoolean("autostart", true)
+
+    /** Active le lancement au démarrage ; Android exige l'autorisation « afficher par-dessus les autres applis ». */
+    @JavascriptInterface
+    fun setAutostart(on: Boolean) {
+        MainActivity.prefs(act).edit().putBoolean("autostart", on).apply()
+        if (on && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && !Settings.canDrawOverlays(act)) {
+            main.post {
+                try {
+                    act.startActivity(
+                        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + act.packageName))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } catch (e: Exception) {
+                }
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun stopSpeaking() {
+        main.post { tts?.stop() }
+    }
+
+    // ---------- son & écran ----------
+
+    private val audio get() = act.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    private fun streamOf(kind: String) = if (kind == "call") AudioManager.STREAM_VOICE_CALL else AudioManager.STREAM_MUSIC
+
+    /** Volume en pourcentage (0–100) : kind = "media" ou "call". */
+    @JavascriptInterface
+    fun getVolume(kind: String): Int {
+        val s = streamOf(kind)
+        val max = audio.getStreamMaxVolume(s).coerceAtLeast(1)
+        return Math.round(audio.getStreamVolume(s) * 100f / max)
+    }
+
+    @JavascriptInterface
+    fun setVolume(kind: String, percent: Int) {
+        main.post {
+            val s = streamOf(kind)
+            val max = audio.getStreamMaxVolume(s)
+            try {
+                audio.setStreamVolume(s, Math.round(percent.coerceIn(0, 100) * max / 100f), 0)
+            } catch (e: Exception) {
+            }
+        }
+    }
+
+    /** Luminosité de l'écran pour cette application (0–100). */
+    @JavascriptInterface
+    fun setBrightness(percent: Int) {
+        main.post {
+            val lp = act.window.attributes
+            lp.screenBrightness = (percent.coerceIn(5, 100)) / 100f
+            act.window.attributes = lp
+        }
+    }
+
+    @JavascriptInterface
+    fun openSettings(which: String) {
+        val action = when (which) {
+            "bluetooth" -> Settings.ACTION_BLUETOOTH_SETTINGS
+            "sound" -> Settings.ACTION_SOUND_SETTINGS
+            "display" -> Settings.ACTION_DISPLAY_SETTINGS
+            "apps" -> Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+            else -> Settings.ACTION_SETTINGS
+        }
+        main.post {
+            try {
+                val i = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (which == "apps") i.data = Uri.fromParts("package", act.packageName, null)
+                act.startActivity(i)
+            } catch (e: Exception) {
+            }
+        }
+    }
+
+    /** Appelle la messagerie vocale du téléphone. */
+    @JavascriptInterface
+    fun callVoicemail() {
+        main.post {
+            val uri = Uri.fromParts("voicemail", "", null)
+            val action = if (has(Manifest.permission.CALL_PHONE)) Intent.ACTION_CALL else Intent.ACTION_DIAL
+            try {
+                act.startActivity(Intent(action, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+            }
+        }
+    }
+
+    fun release() {
+        audioCoord.stop()
+        recognizer?.destroy()
+        recognizer = null
+        tts?.shutdown()
+        tts = null
+    }
+}
