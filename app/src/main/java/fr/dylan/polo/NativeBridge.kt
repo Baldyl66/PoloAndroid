@@ -358,15 +358,20 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
             recognizer?.destroy()
             val r = SpeechRecognizer.createSpeechRecognizer(act)
             recognizer = r
+            val startedAt = android.os.SystemClock.elapsedRealtime()
+            var heard = false
             r.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) = emit("speech", "{\"type\":\"start\"}")
-                override fun onBeginningOfSpeech() {}
+                override fun onBeginningOfSpeech() { heard = true }
                 override fun onRmsChanged(rmsdB: Float) = emit("speech", "{\"type\":\"rms\",\"level\":$rmsdB}")
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {}
                 override fun onError(error: Int) {
                     // micro encore occupé : on réessaie une fois au lieu de répondre « pas compris »
-                    if (listenRetry < 1 && (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
+                    // erreur parasite d'Android quand on relance vite : arrive avant même qu'on ait parlé
+                    val spurious = !heard && android.os.SystemClock.elapsedRealtime() - startedAt < 1500 &&
+                            (error == SpeechRecognizer.ERROR_NO_MATCH || error == 11 /* serveur déconnecté */)
+                    if (listenRetry < 2 && (spurious || error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
                                 error == SpeechRecognizer.ERROR_AUDIO || error == SpeechRecognizer.ERROR_CLIENT)) {
                         listenRetry++
                         main.postDelayed({ startRecognizer() }, 600)
@@ -511,6 +516,7 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
     @Volatile private var neuralFailed = false
 
     private fun ttsFinished(id: String?) {
+        WakeWord.mutedUntil = android.os.SystemClock.elapsedRealtime() + 800
         main.post { audioCoord.abandonFocus() }
         emit("tts", JSONObject().put("type", "done").put("id", id ?: "").toString())
     }
@@ -539,6 +545,8 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
     }
 
     private fun speakAny(text: String, nav: Boolean) {
+        // pas de réveil « Polo » pendant que l'appli parle (levé à la fin de la phrase)
+        WakeWord.mutedUntil = android.os.SystemClock.elapsedRealtime() + 30_000
         val nv = neuralVoice()
         if (nv != null) {
             main.post {

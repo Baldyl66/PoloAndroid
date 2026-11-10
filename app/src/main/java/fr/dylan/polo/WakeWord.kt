@@ -76,13 +76,16 @@ object WakeWord {
         val m = model ?: return
         if (!enabled || paused || service != null) return
         try {
-            val rec = Recognizer(m, 16000f, "[\"polo\", \"[unk]\"]")
+            // mots « leurres » proches de « polo » : sans eux, tout son ressemblant était pris pour « polo »
+            val rec = Recognizer(m, 16000f, GRAMMAR)
+            rec.setWords(true)
             val s = SpeechService(rec, 16000f)
             service = s
             s.startListening(object : RecognitionListener {
-                override fun onPartialResult(hypothesis: String?) = check(hypothesis, "partial")
-                override fun onResult(hypothesis: String?) = check(hypothesis, "text")
-                override fun onFinalResult(hypothesis: String?) = check(hypothesis, "text")
+                // les résultats provisoires ne déclenchent plus rien (trop de faux départs)
+                override fun onPartialResult(hypothesis: String?) {}
+                override fun onResult(hypothesis: String?) = check(hypothesis)
+                override fun onFinalResult(hypothesis: String?) = check(hypothesis)
                 override fun onError(exception: Exception?) { close(); main.postDelayed({ listen() }, 3000) }
                 override fun onTimeout() { close(); listen() }
             })
@@ -91,10 +94,24 @@ object WakeWord {
         }
     }
 
-    private fun check(json: String?, key: String) {
-        val text = try { JSONObject(json ?: return).optString(key) } catch (e: Exception) { return }
-        if (!text.split(" ").contains("polo")) return
+    private val GRAMMAR = "[\"polo\", \"solo\", \"photo\", \"loto\", \"police\", \"polar\", \"poli\", \"pôle\", \"pologne\", " +
+        "\"pot\", \"peau\", \"beau\", \"eau\", \"pour\", \"pour l'eau\", \"bonjour\", \"allô\", \"oh\", \"non\", \"oui\", \"[unk]\"]"
+
+    /** Ignore le réveil pendant que l'appli parle elle-même (sinon elle se réveille toute seule). */
+    @Volatile var mutedUntil = 0L
+
+    private fun check(json: String?) {
+        val o = try { JSONObject(json ?: return) } catch (e: Exception) { return }
+        val words = o.optJSONArray("result") ?: return
+        // « polo » prononcé seul ou presque, avec une bonne confiance
+        var hit = false
+        for (i in 0 until words.length()) {
+            val w = words.optJSONObject(i) ?: continue
+            if (w.optString("word") == "polo" && w.optDouble("conf", 0.0) >= 0.85) hit = true
+        }
+        if (!hit || words.length() > 4) return
         val now = SystemClock.elapsedRealtime()
+        if (now < mutedUntil) return
         if (now - lastWake < 3000) return
         lastWake = now
         pause()
