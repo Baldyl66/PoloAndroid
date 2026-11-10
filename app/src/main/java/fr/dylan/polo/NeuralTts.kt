@@ -57,12 +57,12 @@ object NeuralTts {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                     .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                         .setSampleRate(sr).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                    // Android 12+ : grand tampon, lecture lancée dès 0,1 s de son (sinon Android attend
-                    // que le tampon soit plein… et une phrase courte ne sortait jamais). Avant : tampon de 3 s.
-                    .setBufferSizeInBytes(sr * 4 * (if (android.os.Build.VERSION.SDK_INT >= 31) 30 else 3))
+                    // tampon d'1 s : certains appareils ne démarrent la lecture qu'une fois le tampon plein
+                    // (avec 30 s, une phrase courte ne sortait jamais). Le calcul (≈ 6× plus rapide que
+                    // la parole) garde toujours de l'avance, l'écriture bloquante ne fait que le cadencer.
+                    .setBufferSizeInBytes(maxOf(AudioTrack.getMinBufferSize(sr, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_FLOAT), sr * 4))
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
-                if (android.os.Build.VERSION.SDK_INT >= 31) try { t.setStartThresholdInFrames(sr / 10) } catch (e: Exception) {}
                 track = t
                 t.play()
                 var frames = 0L
