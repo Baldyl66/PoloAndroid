@@ -57,17 +57,38 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.parseColor("#2B1055")
+        // bord à bord : le dégradé passe sous la barre d'état
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = BG
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(BG)
             setPadding(0, 0, 0, dp(28))
+            clipChildren = false
         }
-        root.addView(hero())
+        val heroView = hero()
+        root.addView(heroView)
+        root.setOnApplyWindowInsetsListener { _, ins ->
+            @Suppress("DEPRECATION")
+            heroView.setPadding(dp(22), ins.systemWindowInsetTop + dp(20), dp(22), dp(48))
+            @Suppress("DEPRECATION")
+            root.setPadding(0, 0, 0, ins.systemWindowInsetBottom + dp(24))
+            ins
+        }
 
+        // colonne centrée, largeur limitée (lisible aussi en paysage / tablette)
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), 0, dp(18), 0)
+            setPadding(dp(16), 0, dp(16), 0)
+            clipChildren = false
+            clipToPadding = false
+            layoutParams = LinearLayout.LayoutParams(minOf(resources.displayMetrics.widthPixels, dp(560)), -2).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
         }
         root.addView(body)
 
@@ -108,25 +129,30 @@ class MainActivity : Activity() {
     // ===================== en-tête =====================
 
     private fun hero(): View {
+        // bandeau compact : icône à gauche, titre + sous-titre à droite
         val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(24), dp(40), dp(24), dp(52))
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(22), dp(48), dp(22), dp(48))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(Color.parseColor("#2B1055"), Color.parseColor("#C2417A"), Color.parseColor("#FFB27B"))
-            ).apply { cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, dp(32).toFloat(), dp(32).toFloat(), dp(32).toFloat(), dp(32).toFloat()) }
+            ).apply { cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, dp(28).toFloat(), dp(28).toFloat(), dp(28).toFloat(), dp(28).toFloat()) }
         }
-        box.addView(ImageView(this).apply {
+        val inner = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(minOf(resources.displayMetrics.widthPixels - dp(44), dp(528)), -2)
+        }
+        inner.addView(ImageView(this).apply {
             setImageResource(R.drawable.ic_launcher)
-            layoutParams = LinearLayout.LayoutParams(dp(84), dp(84))
-            elevation = dp(6).toFloat()
+            layoutParams = LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(14) }
         })
-        box.addView(text("Polo Compagnon", 28f, Color.WHITE, bold = true).apply { setPadding(0, dp(12), 0, 0) })
-        box.addView(text("Les notifications de ton téléphone\nsur l'autoradio de la Polo", 15f, Color.parseColor("#F3E6F0")).apply {
-            gravity = Gravity.CENTER
-            setPadding(0, dp(4), 0, 0)
-        })
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
+        col.addView(text("Polo Compagnon", 24f, Color.WHITE, bold = true))
+        col.addView(text("Tes notifications sur l'autoradio de la Polo", 14f, Color.parseColor("#F3E6F0")).apply { setPadding(0, dp(2), 0, 0) })
+        inner.addView(col)
+        box.addView(inner)
         return box
     }
 
