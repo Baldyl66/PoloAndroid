@@ -38,4 +38,7 @@ android {
 
 dependencies {
     implementation("androidx.webkit:webkit:1.8.0")
+    // reconnaissance vocale hors ligne pour le réveil « Polo »
+    implementation("com.alphacephei:vosk-android:0.3.47@aar")
+    implementation("net.java.dev.jna:jna:5.13.0@aar")
 }

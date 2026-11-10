@@ -31,6 +31,8 @@ import org.json.JSONObject
 class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     val audioCoord = AudioCoordinator(act) { state, number ->
+        // pas d'écoute de « Polo » pendant un appel
+        if (state == "idle") WakeWord.resume() else WakeWord.pause()
         val j = JSONObject().put("state", state)
         if (!number.isNullOrBlank()) j.put("number", number).put("name", PhoneHub.nameFor(number) ?: number)
         emit("call", j.toString())
@@ -109,6 +111,26 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
     @JavascriptInterface fun phoneReply(key: String, text: String): String = CompanionLink.reply(key, text)
     @JavascriptInterface fun phoneDismiss(key: String): Boolean = CompanionLink.dismiss(key)
     @JavascriptInterface fun phoneLink(): String = CompanionLink.stateJson()
+
+    // ---------- réveil de l'assistant en disant « Polo » ----------
+
+    @JavascriptInterface
+    fun getWake(): Boolean = MainActivity.prefs(act).getBoolean("wakeWord", true)
+
+    @JavascriptInterface
+    fun wakeAvailable(): Boolean = WakeWord.available(act)
+
+    @JavascriptInterface
+    fun setWake(on: Boolean) {
+        MainActivity.prefs(act).edit().putBoolean("wakeWord", on).apply()
+        main.post { if (on) startWake() else WakeWord.stop() }
+    }
+
+    /** Démarre l'écoute de « Polo » si le réglage est activé et le micro autorisé. */
+    fun startWake() {
+        if (!getWake() || !has(Manifest.permission.RECORD_AUDIO)) return
+        WakeWord.start(act) { emit("wake", "{}") }
+    }
 
     /** Dernier plantage enregistré (vide s'il n'y en a pas). */
     @JavascriptInterface
@@ -280,6 +302,7 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
                 emit("speech", JSONObject().put("type", "error").put("code", "unavailable").toString())
                 return@post
             }
+            WakeWord.pause()   // libère le micro pour la dictée
             recognizer?.destroy()
             val r = SpeechRecognizer.createSpeechRecognizer(act)
             recognizer = r
@@ -297,10 +320,12 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
                         else -> "error"
                     }
                     emit("speech", JSONObject().put("type", "error").put("code", code).toString())
+                    WakeWord.resume()
                 }
                 override fun onResults(results: Bundle?) {
                     val t = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                     emit("speech", JSONObject().put("type", "final").put("text", t).toString())
+                    WakeWord.resume()
                 }
                 override fun onPartialResults(partialResults: Bundle?) {
                     val t = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: return
@@ -319,7 +344,7 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     @JavascriptInterface
     fun stopListening() {
-        main.post { recognizer?.cancel() }
+        main.post { recognizer?.cancel(); WakeWord.resume() }
     }
 
     // ---------- assistant vocal : lecture à voix haute ----------
@@ -362,22 +387,27 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         tts?.setPitch(p.getFloat("ttsPitch", 1f))
     }
 
-    /** Voix françaises installées : {"ready", "voices":[{id, label}]}. */
+    /** Voix installées : {"ready", "voices":[{id, label}] (françaises), "ja":[{id, label}] (japonaises)}. */
     @JavascriptInterface
     fun ttsVoices(): String {
         main.post { ensureTts() }
         val out = JSONObject().put("ready", ttsReady)
         val arr = JSONArray()
+        val ja = JSONArray()
         if (ttsReady) try {
-            val fr = tts?.voices?.filter { !it.isNetworkConnectionRequired && it.locale.language == "fr" }
-                ?.sortedWith(compareBy({ it.locale.country != "FR" }, { it.name })) ?: emptyList()
+            val local = tts?.voices?.filter { !it.isNetworkConnectionRequired } ?: emptyList()
+            val fr = local.filter { it.locale.language == "fr" }
+                .sortedWith(compareBy({ it.locale.country != "FR" }, { it.name }))
             val region = mapOf("FR" to "", "CA" to " · Québec", "BE" to " · Belgique", "CH" to " · Suisse")
             fr.forEachIndexed { i, v ->
                 arr.put(JSONObject().put("id", v.name).put("label", "Voix ${i + 1}" + (region[v.locale.country] ?: " · ${v.locale.country}")))
             }
+            local.filter { it.locale.language == "ja" }.sortedBy { it.name }.forEach { v ->
+                ja.put(JSONObject().put("id", v.name).put("label", v.name))
+            }
         } catch (e: Exception) {
         }
-        return out.put("voices", arr).toString()
+        return out.put("voices", arr).put("ja", ja).toString()
     }
 
     /** Règle le timbre : voix ("" = française par défaut), vitesse et hauteur (1 = normal). */

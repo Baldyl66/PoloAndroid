@@ -93,6 +93,7 @@ class MainActivity : Activity() {
         MediaHub.init(this) { json -> bridge.emit("media", json) }
         PhoneHub.init(this) { type, json -> bridge.emit(type, json) }
         CompanionLink.init(this) { type, json -> bridge.emit(type, json) }
+        bridge.startWake()
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
 
@@ -238,6 +239,7 @@ class MainActivity : Activity() {
             cb.invoke(origin, hasPerm(Manifest.permission.ACCESS_FINE_LOCATION), true)
             pendingGeo = null
         }
+        bridge.startWake()
         bridge.emit("permissions", bridge.permissionsJson())
     }
 
@@ -288,6 +290,7 @@ class MainActivity : Activity() {
         bridge.release()
         MediaHub.release()
         CompanionLink.release()
+        WakeWord.stop()
         webView.destroy()
         super.onDestroy()
     }
