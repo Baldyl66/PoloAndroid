@@ -48,6 +48,18 @@ Choisis **Polo Radio** puis **Toujours**.
 
 Pour revenir à l'écran d'origine : même réglage, choisis l'ancien lanceur.
 
+## 4. Recevoir les notifications du téléphone (Polo Compagnon)
+
+GitHub fabrique aussi **PoloCompagnon.apk** (artefact `PoloCompagnon-apk`) : c'est une petite appli pour **ton téléphone**.
+
+1. Installe-la sur le téléphone, de préférence en USB avec `adb install PoloCompagnon.apk`
+   (installée depuis un fichier, Android peut bloquer l'accès aux notifications : « paramètre restreint »).
+2. Ouvre **Polo Compagnon** et suis les 3 étapes : accès aux notifications, Bluetooth, code d'appairage.
+3. Le code à 6 chiffres est affiché sur l'autoradio : **Réglages → Bluetooth → Téléphone (Polo Compagnon)**.
+4. Sur un Xiaomi : mets Polo Compagnon en **Démarrage automatique** et **sans restriction de batterie**.
+
+La liaison passe par le **partage de connexion** du téléphone (Wi-Fi), sinon par le **Bluetooth**.
+
 ## Ce qui fonctionne pour de vrai
 
 | Fonction | Comment |
@@ -61,7 +73,8 @@ Pour revenir à l'écran d'origine : même réglage, choisis l'ancien lanceur.
 | Maison / Travail | À définir dans Réglages → Navigation (ou en touchant le bouton la 1re fois) |
 | Trajets récents | Enregistrés automatiquement |
 | Météo | Vraie météo à ta position (Open-Meteo) |
-| Assistant vocal | Reconnaissance vocale d'Android (destination, réponse aux messages) et lecture à voix haute |
+| Notifications | Toutes les notifications du téléphone (via Polo Compagnon) : bandeau animé en haut de l'écran, écran Notifications, dernière notification sur l'accueil, réponses proposées selon le message |
+| Assistant vocal | Reconnaissance vocale d'Android (destination, réponse aux messages) et lecture à voix haute. Un message reçu est lu (petit son, puis « Message de Paul sur WhatsApp… Tu veux répondre ? »), la réponse se dicte et se confirme à la voix. Voix et vitesse : Réglages → Alertes → Voix |
 | Son & écran | Volume média, volume des appels et luminosité réels ; raccourcis vers les réglages Bluetooth et son |
 | Prénom | Réglages → À propos → Conducteur (affiché au démarrage) |
 | Guidage vocal | Annonces « Dans 300 mètres, tournez à droite… » ; bouton haut-parleur sur la carte pour couper ; Réglages → Navigation |
@@ -87,7 +100,8 @@ Pour revenir à l'écran d'origine : même réglage, choisis l'ancien lanceur.
 - **Pause de la musique pendant un appel** : détectée via l'état téléphone / audio de l'autoradio ; sur les modèles
   dont l'appli Bluetooth ne le signale pas, l'appli de musique gère elle-même la pause.
 - **Limitation de vitesse** : affichée seulement quand elle est renseignée dans OpenStreetMap.
-- **Messages** : viennent uniquement des notifications des applis de messagerie (dont le Bluetooth de certains autoradios). Polo Radio n'a aucun accès aux SMS : la réponse passe par le bouton « Répondre » de la notification, et seulement s'il existe.
+- **Messages** : viennent des notifications du téléphone via Polo Compagnon. Aucune des deux applis n'a accès aux SMS : la réponse passe par le bouton « Répondre » de la notification sur le téléphone, et seulement si l'appli en propose un.
+- **Bluetooth du compagnon** : sur certains autoradios chinois, le Bluetooth du téléphone est géré par une puce à part qu'Android ne voit pas ; la liaison passe alors uniquement par le partage de connexion.
 - **Assistant vocal** : nécessite les services Google (ou un autre moteur de reconnaissance vocale) sur l'autoradio
   et une connexion internet.
 - Il faut une connexion internet (partage de connexion du téléphone) pour la carte, les itinéraires, la recherche et la météo.

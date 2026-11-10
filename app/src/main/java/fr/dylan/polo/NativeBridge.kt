@@ -334,6 +334,7 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) {
                 tts?.language = Locale.FRANCE
+                applyTtsPrefs()
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}
                     override fun onDone(utteranceId: String?) = ttsFinished(utteranceId)
@@ -346,6 +347,57 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
             }
             pendingSpeech = null
         }
+    }
+
+    /** Applique la voix et la vitesse choisies dans Réglages → Alertes → Voix. */
+    private fun applyTtsPrefs() {
+        val p = MainActivity.prefs(act)
+        val id = p.getString("ttsVoice", null)
+        if (id != null) try {
+            tts?.voices?.firstOrNull { it.name == id }?.let { tts?.voice = it }
+        } catch (e: Exception) {
+        }
+        tts?.setSpeechRate(p.getFloat("ttsRate", 1f))
+    }
+
+    /** Voix françaises disponibles : {"ready", "current", "rate", "voices":[{id, label}]}. */
+    @JavascriptInterface
+    fun ttsVoices(): String {
+        main.post { ensureTts() }
+        val out = JSONObject().put("ready", ttsReady)
+            .put("current", MainActivity.prefs(act).getString("ttsVoice", "") ?: "")
+            .put("rate", MainActivity.prefs(act).getFloat("ttsRate", 1f).toDouble())
+        val arr = JSONArray()
+        if (ttsReady) try {
+            val list = tts?.voices?.filter { it.locale.language == "fr" && !it.isNetworkConnectionRequired }
+                ?.sortedWith(compareBy({ it.locale.country != "FR" }, { it.name })) ?: emptyList()
+            val region = mapOf("FR" to "", "CA" to " · Québec", "BE" to " · Belgique", "CH" to " · Suisse")
+            list.forEachIndexed { i, v ->
+                arr.put(JSONObject().put("id", v.name).put("label", "Voix ${i + 1}" + (region[v.locale.country] ?: " · ${v.locale.country}")))
+            }
+        } catch (e: Exception) {
+        }
+        return out.put("voices", arr).toString()
+    }
+
+    /** Choisit la voix ("" = voix par défaut) et lit un exemple. */
+    @JavascriptInterface
+    fun setTtsVoice(id: String) {
+        MainActivity.prefs(act).edit().putString("ttsVoice", id.ifEmpty { null }).apply()
+        main.post {
+            ensureTts()
+            if (id.isEmpty()) tts?.language = Locale.FRANCE
+            applyTtsPrefs()
+        }
+        speak("Bonjour, je suis ta nouvelle voix.")
+    }
+
+    /** Vitesse de lecture (0.7 à 1.4) et lit un exemple. */
+    @JavascriptInterface
+    fun setTtsRate(rate: Double) {
+        MainActivity.prefs(act).edit().putFloat("ttsRate", rate.toFloat().coerceIn(0.5f, 2f)).apply()
+        main.post { ensureTts(); applyTtsPrefs() }
+        speak("Voici ma nouvelle vitesse de lecture.")
     }
 
     private var pendingNav = false

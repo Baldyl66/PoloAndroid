@@ -1356,7 +1356,7 @@ tap($('recherche','#qmic'),dictateDest);
     }
   renderList();renderChat();
   window.setConversations=a=>{const k=CONVS[sel]&&CONVS[sel].number;CONVS.length=0;a.forEach(x=>CONVS.push(x));sel=Math.max(0,CONVS.findIndex(c=>c.number===k));renderList();renderChat()};window.__selectConv=k=>{const i=CONVS.findIndex(c=>c.number===k);if(i>=0){sel=i;CONVS[i].un=0;if(window.__notifRead)window.__notifRead(k);renderList();renderChat()}};
-  window.__notifOpen=(k,reply)=>{go('messages');window.__selectConv(k);const c=CONVS[sel];if(reply&&c&&c.number===k&&c.canReply)listen('Réponse à '+c.name,t=>{setDraft(t);openKbd()})};
+  window.__notifOpen=(k,reply)=>{go('messages');window.__selectConv(k);const c=CONVS[sel];if(reply&&c&&c.number===k&&c.canReply){if(window.__voiceReply)window.__voiceReply(c);else listen('Réponse à '+c.name,t=>{setDraft(t);openKbd()})}};
   const st=document.createElement('style');st.textContent=`.pillc,.cv .dot,.cv .n{background:var(--notif,var(--aB5573A,#B5573A)) !important}.r>.c:first-child{min-height:0;overflow:hidden;display:flex;flex-direction:column}#convList{display:flex;flex-direction:column;gap:8px;padding-top:6px;flex:1 1 auto;min-height:0;overflow-y:auto !important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-y}#convList::-webkit-scrollbar{display:none}#convList .cv{flex:none}`;R.messages.appendChild(st);
   tap($('messages','.callb'),()=>startCall());
   $$('messages','.chip').forEach(b=>tap(b,()=>send(b.textContent.trim())));
@@ -1531,7 +1531,7 @@ const crd=(t,k,inner,st)=>`<div style="background:var(--cFBF9F5,#FBF9F5);border-
       <div style="display:flex;gap:14px">
         ${[['1','Associe le téléphone','Dans les réglages Bluetooth de l’autoradio'],['2','Autorise le partage','Contacts et journal d’appels sur le téléphone'],['3','C’est prêt','Tout apparaît ici automatiquement']].map(x=>`<div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;padding:16px 18px;box-shadow:0 2px 10px rgba(43,42,40,.06)"><span style="display:inline-flex;width:30px;height:30px;border-radius:15px;background:#2F7FD8;color:#fff;font-weight:800;align-items:center;justify-content:center">${x[0]}</span><div style="font-weight:700;font-size:17px;margin-top:10px">${x[1]}</div><div class="m" style="font-size:14px;margin-top:4px;line-height:1.35">${x[2]}</div></div>`).join('')}
       </div>`,
-    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0',true))}`,
+    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche une voix ou une vitesse pour l’écouter</small></span></div><div data-ttsbox style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0 58px"></div><div data-ttsrate style="display:flex;gap:8px;margin:10px 0 0 58px"></div></div>`)}`,
     'Navigation':`<div style="display:flex;gap:16px;align-items:stretch"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">${crd('Lieux favoris','pin','<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><div class="place" data-place="Maison"></div><div class="place" data-place="Travail"></div></div>')}${crd('Musique pendant les annonces','music','<div style="display:flex;gap:10px;margin-top:8px"><button class="g gm" data-gm="duck" style="height:52px;font-size:17px">Baisser</button><button class="g gm" data-gm="pause" style="height:52px;font-size:17px">Pause</button></div>')}</div><div style="flex:1;min-width:0">${crd('Guidage','nav',swr('nav','Guidage vocal','Annonces « tournez à droite… »',load('polo-navvoice')!=='0')+swr('toll','Éviter les péages','',load('polo-avoid-toll')==='1')+swr('road','Éviter les autoroutes','',load('polo-avoid-motorway')==='1')+swr('tilt','Vue inclinée','',true)+swr('b3d','Bâtiments en 3D','',false,true),'height:100%;box-sizing:border-box')}</div></div>`,
     'À propos':`<span data-name style="display:none"></span><div style="display:flex;gap:14px"><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Véhicule</div><div style="font-size:18px;font-weight:700;margin-top:2px">Volkswagen Polo</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Application</div><div style="font-size:18px;font-weight:700;margin-top:2px">Polo Radio 1.1</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Écran</div><div style="font-size:18px;font-weight:700;margin-top:2px" data-screen></div></div></div><div style="display:flex;gap:14px"><button class="pbtn" data-os="apps" style="flex:1">Autorisations de l’application</button><button class="pbtn" data-crashlog style="flex:1">Journal d’erreurs</button></div>`,
   };
@@ -2241,6 +2241,53 @@ boot();
       arm(n.isMsg?9000:6000);
     };
   })();
+  // ---- assistant vocal : lecture des messages et réponse à la voix ----
+  let actx=null;
+  function chime(){
+    try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();
+      const t0=actx.currentTime;[[1318.5,0],[1760,.13]].forEach(([f,d])=>{
+        const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;
+        g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.22,t0+d+.02);g.gain.exponentialRampToValueAtTime(.001,t0+d+.55);
+        o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+.6)})}catch(e){}
+  }
+  const YES=/^(oui|ouais|ouai|yes|vas[- ]?y|ok|okay|d'accord|daccord|bien s[uû]r|carr[ée]ment|r[ée]ponds?|r[ée]pondre|envoie|envoyer|go)\b/i;
+  const NO=/^(non|nan|nope|pas maintenant|plus tard|annule|annuler|stop|laisse|rien)\b/i;
+  // lit un texte, puis appelle cb une fois la lecture terminée
+  function say(label,text,cb){
+    speakOut(label,text);if(!cb)return;let done=false;const next=()=>{if(done)return;done=true;setTimeout(cb,650)};
+    const prev=window.__tts;window.__tts=e=>{if(prev)prev(e);if(e.type==='done'&&e.id!=='nav')next()};
+    if(!(window.PoloNative&&PoloNative.speak)&&typeof ttsUtter!=='undefined'&&ttsUtter){const o=ttsUtter.onend;ttsUtter.onend=ttsUtter.onerror=ev=>{if(o)o(ev);next()}}
+  }
+  function confirmSend(c,msg){
+    say('Assistant','J’envoie : '+msg+' ?',()=>listen('Envoyer à '+c.name+' ?',ok=>{
+      if(!YES.test(ok.trim())){say('Assistant','Message annulé.');return}
+      const r=window.PoloNative&&PoloNative.phoneReply?PoloNative.phoneReply(c.number,msg):'offline';
+      if(r==='ok'&&window.__notifRead)window.__notifRead(c.number);
+      say('Assistant',r==='ok'?'Message envoyé.':'Le téléphone n’est pas connecté, message non envoyé.');
+    }));
+  }
+  // réponse dictée : « dicte », puis « J'envoie : … ? », puis « oui »
+  function voiceReply(c){
+    if(!c||!c.canReply)return;
+    listen('Réponse à '+c.name,msg=>confirmSend(c,msg));
+  }
+  window.__voiceReply=voiceReply;
+  function autoRead(c){
+    if(ld('polo-sms-voice','1')==='0'||voiceOpen||/^appel/.test(current))return;
+    chime();
+    setTimeout(()=>{
+      if(voiceOpen||/^appel/.test(current))return;
+      const intro=('Message de '+c.name+(c.app&&c.app!==c.name?' sur '+c.app:'')+'. '+c.last).trim().replace(/[.!?…]*$/,m=>m||'.');
+      if(window.__notifRead)window.__notifRead(c.number);
+      if(!c.canReply){say(c.app,intro);return}
+      say(c.app,intro+' Tu veux répondre ?',()=>listen('Répondre à '+c.name+' ?',t=>{
+        t=t.trim();
+        if(NO.test(t)){say('Assistant','D’accord.');return}
+        if(YES.test(t)&&t.split(/\s+/).length<=3){say('Assistant','Je t’écoute.',()=>voiceReply(c));return}
+        confirmSend(c,t);   // réponse dictée directement
+      }));
+    },800);
+  }
   function loadMsgs(){
     let a=[],lk={};try{a=JSON.parse(N.phoneNotifs())}catch(e){}try{lk=JSON.parse(N.phoneLink())}catch(e){}
     window.__phoneLinked=lk.state==='wifi'||lk.state==='bt';
@@ -2256,7 +2303,9 @@ boot();
     const fresh=d&&d.type==='posted'&&d.item&&d.item.fresh;
     if(fresh)UNREAD.add(d.item.key);
     loadMsgs();
-    if(fresh&&!/^appel/.test(current)&&current!=='demarrage'&&current!=='messages')banner(toConv(d.item));
+    if(fresh){const c=toConv(d.item);
+      if(!/^appel/.test(current)&&current!=='demarrage'&&current!=='messages')banner(c);
+      if(c.isMsg)autoRead(c)}
   };
   window.__sms=()=>{};
   setTimeout(loadMsgs,1500);
@@ -2265,6 +2314,21 @@ boot();
 </script>
 <script>
 (function(){
+  // choix de la voix et de la vitesse de l'assistant (Réglages → Alertes → Voix)
+  function fillTts(box,rateBox){
+    let v={};try{v=JSON.parse(window.PoloNative.ttsVoices())}catch(e){return}
+    const sig=JSON.stringify(v);if(box.dataset.sig===sig)return;box.dataset.sig=sig;
+    const chip=(lab,on,attr)=>`<button ${attr} style="border:0;cursor:pointer;font:600 15px system-ui,sans-serif;padding:9px 16px;border-radius:18px;${on?'background:var(--aC0603F,#C0603F);color:#fff;box-shadow:0 4px 12px rgba(var(--rgbacc,192,96,63),.35)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">${lab}</button>`;
+    const voices=v.voices||[];
+    box.innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':
+      chip('Par défaut',!v.current||!voices.some(x=>x.id===v.current),'data-tv=""')+voices.map(x=>chip(x.label,x.id===v.current,`data-tv="${x.id.replace(/"/g,'&quot;')}"`)).join('');
+    const r=+v.rate||1;
+    rateBox.innerHTML=[['Lente',.8],['Normale',1],['Rapide',1.2]].map(([l,x])=>chip('⏱ '+l,Math.abs(r-x)<.05,`data-tr="${x}"`)).join('');
+    box.querySelectorAll('[data-tv]').forEach(b=>b.onclick=()=>{window.PoloNative.setTtsVoice(b.dataset.tv);box.dataset.sig='';setTimeout(()=>fillTts(box,rateBox),150)});
+    rateBox.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{window.PoloNative.setTtsRate(+b.dataset.tr);box.dataset.sig='';setTimeout(()=>fillTts(box,rateBox),150)});
+  }
+  function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsbox]').forEach(b=>{if(b.getClientRects().length)fillTts(b,b.nextElementSibling)})})}
+  if(window.PoloNative&&window.PoloNative.ttsVoices)setInterval(()=>{if(!document.hidden)updTts()},1000);
   function phoneRow(row){
     let lk={};try{lk=JSON.parse(window.PoloNative.phoneLink())}catch(e){return ''}
     const code=`<span style="letter-spacing:3px;font-variant-numeric:tabular-nums">${lk.code||'——'}</span>`;
