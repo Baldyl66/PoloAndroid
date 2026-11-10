@@ -362,32 +362,22 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         tts?.setPitch(p.getFloat("ttsPitch", 1f))
     }
 
-    /**
-     * Voix disponibles : {"ready", "voices":[{id, label}] (françaises),
-     * "accents":{"en": id, "it": id, "es": id, "de": id} (voix étrangères qui liront le français)}.
-     */
+    /** Voix françaises installées : {"ready", "voices":[{id, label}]}. */
     @JavascriptInterface
     fun ttsVoices(): String {
         main.post { ensureTts() }
         val out = JSONObject().put("ready", ttsReady)
         val arr = JSONArray()
-        val accents = JSONObject()
         if (ttsReady) try {
-            val local = tts?.voices?.filter { !it.isNetworkConnectionRequired } ?: emptyList()
-            val fr = local.filter { it.locale.language == "fr" }
-                .sortedWith(compareBy({ it.locale.country != "FR" }, { it.name }))
+            val fr = tts?.voices?.filter { !it.isNetworkConnectionRequired && it.locale.language == "fr" }
+                ?.sortedWith(compareBy({ it.locale.country != "FR" }, { it.name })) ?: emptyList()
             val region = mapOf("FR" to "", "CA" to " · Québec", "BE" to " · Belgique", "CH" to " · Suisse")
             fr.forEachIndexed { i, v ->
                 arr.put(JSONObject().put("id", v.name).put("label", "Voix ${i + 1}" + (region[v.locale.country] ?: " · ${v.locale.country}")))
             }
-            val pref = mapOf("en" to "GB", "it" to "IT", "es" to "ES", "de" to "DE")
-            for ((lang, country) in pref) {
-                val cands = local.filter { it.locale.language == lang }.sortedWith(compareBy({ it.locale.country != country }, { it.name }))
-                cands.firstOrNull()?.let { accents.put(lang, it.name) }
-            }
         } catch (e: Exception) {
         }
-        return out.put("voices", arr).put("accents", accents).toString()
+        return out.put("voices", arr).toString()
     }
 
     /** Règle le timbre : voix ("" = française par défaut), vitesse et hauteur (1 = normal). */
