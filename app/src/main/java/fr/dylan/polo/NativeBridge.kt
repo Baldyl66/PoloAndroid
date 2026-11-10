@@ -416,9 +416,12 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     private fun ensureTts() {
         if (tts != null) return
-        // moteur Google en priorité (voix naturelles) ; sinon le moteur par défaut de l'appareil
+        // moteur choisi dans Android (SherpaTTS, Marmalade… voix neuronales) ;
+        // Google seulement à la place d'un moteur basique (Pico, eSpeak, moteur du fabricant)
         val google = "com.google.android.tts"
-        val hasGoogle = try { act.packageManager.getPackageInfo(google, 0); true } catch (e: Exception) { false }
+        val def = try { Settings.Secure.getString(act.contentResolver, "tts_default_synth") } catch (e: Exception) { null }
+        val basic = def.isNullOrEmpty() || listOf("pico", "svox", "espeak", "iflytek", "kdxf", "baidu").any { def.contains(it, true) }
+        val hasGoogle = basic && def != google && try { act.packageManager.getPackageInfo(google, 0); true } catch (e: Exception) { false }
         val init = TextToSpeech.OnInitListener { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) {
