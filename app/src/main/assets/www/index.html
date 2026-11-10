@@ -2174,6 +2174,73 @@ boot();
     mc.querySelector('.sub span').textContent=c?'· '+c.time+' · '+c.last:'';
     mc.querySelector('.call').style.display=c&&c.canReply?'':'none';
   }
+  // bandeau animé en haut de l'écran à l'arrivée d'une notification
+  const banner=(()=>{
+    const css=document.createElement('style');css.textContent=`
+#nban{position:absolute;top:14px;left:50%;z-index:14;width:660px;max-width:calc(100% - 28px);box-sizing:border-box;transform:translate(-50%,-140%) scale(.96);opacity:0;pointer-events:none;
+  transition:transform .55s cubic-bezier(.2,1.25,.35,1),opacity .3s ease;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;touch-action:none}
+#nban.show{transform:translate(-50%,0) scale(1);opacity:1;pointer-events:auto}
+#nban.bump{animation:nbBump .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes nbBump{0%{transform:translate(-50%,0) scale(1)}35%{transform:translate(-50%,0) scale(1.03)}100%{transform:translate(-50%,0) scale(1)}}
+#nban .in{position:relative;display:flex;align-items:center;gap:16px;padding:14px 16px 16px 14px;border-radius:26px;overflow:hidden;color:#fff;
+  background:linear-gradient(120deg,rgba(34,31,29,.9),rgba(24,22,21,.86));backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  box-shadow:0 18px 40px rgba(0,0,0,.35),0 2px 8px rgba(0,0,0,.25),inset 0 0 0 1px rgba(255,255,255,.08)}
+#nban .in::before{content:"";position:absolute;left:-60px;top:-80px;width:260px;height:220px;border-radius:50%;background:radial-gradient(closest-side,var(--notif,#e0533a),transparent);opacity:.45;pointer-events:none}
+#nban .in::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.10) 45%,transparent 60%);transform:translateX(-100%);pointer-events:none}
+#nban.show .in::after{animation:nbShine 1.1s .25s ease-out}
+@keyframes nbShine{to{transform:translateX(100%)}}
+#nban .av{position:relative;flex:none;width:58px;height:58px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;
+  background:linear-gradient(135deg,var(--aE8A87C,#E8A87C),var(--notif,#e0533a));box-shadow:0 6px 16px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.35)}
+#nban.show .av{animation:nbPop .6s .1s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes nbPop{0%{transform:scale(.4) rotate(-12deg)}100%{transform:scale(1) rotate(0)}}
+#nban .av i{position:absolute;right:-5px;bottom:-5px;width:22px;height:22px;border-radius:11px;background:#fff;color:var(--notif,#e0533a);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+#nban .av i svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+#nban .tx{position:relative;flex:1;min-width:0}
+#nban .top{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.62);letter-spacing:.02em}
+#nban .top b{color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+#nban .top .dt{width:4px;height:4px;border-radius:2px;background:rgba(255,255,255,.45)}
+#nban .tt{font-size:21px;font-weight:750;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nban .bd{font-size:16px;line-height:1.3;color:rgba(255,255,255,.82);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#nban .ac{position:relative;display:flex;gap:10px;flex:none}
+#nban .ac button{width:52px;height:52px;border-radius:26px;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;background:rgba(255,255,255,.12);transition:transform .15s,background .2s}
+#nban .ac button:active{transform:scale(.92)}
+#nban .ac button.rp{background:#2E9D5B;box-shadow:0 6px 16px rgba(46,157,91,.45)}
+#nban .ac svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#nban .pg{position:absolute;left:18px;right:18px;bottom:7px;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+#nban .pg span{display:block;height:100%;width:100%;border-radius:2px;background:linear-gradient(90deg,var(--aE8A87C,#E8A87C),var(--notif,#e0533a));transform-origin:left}
+#nban.show .pg span{animation:nbTime var(--dur,7s) linear forwards}
+#nban.hold .pg span{animation-play-state:paused}
+@keyframes nbTime{to{transform:scaleX(0)}}`;
+    document.head.appendChild(css);
+    const el=document.createElement('div');el.id='nban';el.setAttribute('role','status');
+    (document.getElementById('stage')||document.body).appendChild(el);
+    const IC_MSG='<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>',IC_BELL='<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/></svg>';
+    const IC_SPK='<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a3.5 3.5 0 0 1 0 6M18.5 6.5a7 7 0 0 1 0 11"/></svg>';
+    const IC_MIC='<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+    const IC_GO='<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+    let timer=0,c=null,y0=null;
+    const hide=()=>{clearTimeout(timer);el.classList.remove('show','hold','bump')};
+    const arm=ms=>{clearTimeout(timer);el.style.setProperty('--dur',ms+'ms');timer=setTimeout(hide,ms)};
+    el.addEventListener('pointerdown',e=>{y0=e.clientY;el.classList.add('hold');clearTimeout(timer)});
+    el.addEventListener('pointerup',e=>{el.classList.remove('hold');const dy=y0==null?0:e.clientY-y0;y0=null;
+      if(dy<-25){hide();return}
+      const b=e.target.closest('button');if(!c)return;
+      if(b&&b.dataset.a==='spk'){if(window.__notifRead)window.__notifRead(c.number);speakOut(c.app,(c.isMsg?'Message de '+c.name+'. ':c.name+'. ')+c.last);hide();return}
+      if(b&&b.dataset.a==='mic'){hide();window.__notifOpen&&window.__notifOpen(c.number,true);return}
+      hide();window.__notifOpen&&window.__notifOpen(c.number,false)});
+    el.addEventListener('pointercancel',()=>{y0=null;el.classList.remove('hold');arm(3000)});
+    return n=>{
+      const again=el.classList.contains('show');c=n;
+      el.innerHTML=`<div class="in"><div class="av">${escT(n.app.charAt(0).toUpperCase())}<i>${n.isMsg?IC_MSG:IC_BELL}</i></div>
+        <div class="tx"><div class="top"><b>${escT(n.app)}</b><span class="dt"></span><span>maintenant</span></div>
+          <div class="tt">${escT(n.name)}</div>${n.last?`<div class="bd">${escT(n.last)}</div>`:''}</div>
+        <div class="ac">${n.isMsg?`<button data-a="spk" aria-label="Écouter">${IC_SPK}</button>`:''}${n.canReply?`<button class="rp" data-a="mic" aria-label="Répondre">${IC_MIC}</button>`:''}${n.isMsg?'':`<button data-a="go" aria-label="Ouvrir">${IC_GO}</button>`}</div>
+        <div class="pg"><span></span></div></div>`;
+      if(again){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
+      else{el.classList.remove('show');void el.offsetWidth;el.classList.add('show')}
+      arm(n.isMsg?9000:6000);
+    };
+  })();
   function loadMsgs(){
     let a=[],lk={};try{a=JSON.parse(N.phoneNotifs())}catch(e){}try{lk=JSON.parse(N.phoneLink())}catch(e){}
     window.__phoneLinked=lk.state==='wifi'||lk.state==='bt';
@@ -2186,8 +2253,10 @@ boot();
   }
   window.__notifRead=k=>{if(UNREAD.delete(k))loadMsgs()};
   window.__notif=d=>{
-    if(d&&d.type==='posted'&&d.item&&d.item.fresh)UNREAD.add(d.item.key);
+    const fresh=d&&d.type==='posted'&&d.item&&d.item.fresh;
+    if(fresh)UNREAD.add(d.item.key);
     loadMsgs();
+    if(fresh&&!/^appel/.test(current)&&current!=='demarrage'&&current!=='messages')banner(toConv(d.item));
   };
   window.__sms=()=>{};
   setTimeout(loadMsgs,1500);
