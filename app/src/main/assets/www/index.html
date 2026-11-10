@@ -2510,10 +2510,11 @@ boot();
     return out;
   }
   // « Paul fête ses 36 ans aujourd'hui » / « c'est l'anniversaire de Paul et de Julie aujourd'hui »
-  function bdayClause(list){
-    const one=list.length===1,x=list[0],age=one&&x.y>1900?new Date().getFullYear()-x.y:0;
-    return one?(age?first(x.who)+' fête ses '+age+' ans aujourd’hui':'c’est l’anniversaire de '+first(x.who)+' aujourd’hui')
-      :'c’est l’anniversaire de '+listTxt(list.slice(0,3).map(y=>first(y.who))).replace(' et ',' et de ')+' aujourd’hui';
+  // sans « aujourd'hui » quand la phrase commence déjà par « Aujourd'hui »
+  function bdayClause(list,noToday){
+    const one=list.length===1,x=list[0],age=one&&x.y>1900?new Date().getFullYear()-x.y:0,td=noToday?'':' aujourd’hui';
+    return one?(age?first(x.who)+' fête ses '+age+' ans'+td:'c’est l’anniversaire de '+first(x.who)+td)
+      :'c’est l’anniversaire de '+listTxt(list.slice(0,3).map(y=>first(y.who))).replace(' et ',' et de ')+td;
   }
   const callOrMsgQ=list=>list.length===1?'est-ce que tu veux l’appeler ou lui envoyer un message ?':'est-ce que tu veux appeler '+first(list[0].who)+' ou lui envoyer un message ?';
   // réponse à « l'appeler ou lui envoyer un message ? »
@@ -2573,7 +2574,7 @@ boot();
         after=()=>askYes(()=>{const p=savedPlace(trip.name);reply('C’est parti.');startRoute(trip.name,null,false,(p&&p.ll)||trip.ll)})}
       else if(!playing&&load('polo-was-playing')==='1'){q='est-ce que je remets ta musique ?';after=()=>askYes(()=>{if(!playing)togglePlay();reply('C’est parti.')})}
     }
-    const dc=dayClauses(ev),cl=dc.concat(others.length?[bdayClause(others)]:[]);
+    const dc=dayClauses(ev),cl=dc.concat(others.length?[bdayClause(others,dc.length>0)]:[]);
     let body=cl.length?(dc.length?'Aujourd’hui '+listTxt(cl):cap(listTxt(cl))):'';
     let txt=hello;
     if(body)txt+=' '+body+(q?', '+q:'. Je te souhaite de passer une bonne route !');
