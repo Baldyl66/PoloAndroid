@@ -134,9 +134,22 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
     fun aiPasteKey(): String {
         val cm = act.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         val raw = try { cm.primaryClip?.getItemAt(0)?.coerceToText(act)?.toString() } catch (e: Exception) { null }
-        val k = raw?.trim()?.replace(Regex("\\s"), "") ?: return "empty"
-        if (k.isEmpty()) return "empty"
-        if (!Regex("^[A-Za-z0-9_\\-]{30,60}$").matches(k)) return "invalid"
+        return aiSetKey(raw ?: "")
+    }
+
+    /** Enregistre une clé tapée ou collée dans la case de saisie. Mêmes réponses que aiPasteKey. */
+    @JavascriptInterface
+    fun aiSetKey(input: String): String {
+        val txt = input.trim()
+        if (txt.isEmpty()) return "empty"
+        // la clé peut être copiée avec du texte autour (guillemets, nom, code d'exemple…) : on la cherche dedans.
+        // Format habituel : « AIza » + 35 caractères ; sinon le plus long mot qui ressemble à une clé.
+        val k = Regex("AIza[0-9A-Za-z_\\-]{30,}").find(txt)?.value
+            ?: Regex("[A-Za-z0-9_.\\-]{30,200}").findAll(txt).map { it.value }.maxByOrNull { it.length }
+        if (k == null) {
+            // diagnostic sans révéler le contenu : longueur et 4 premiers caractères
+            return "invalid:" + txt.length + ":" + txt.take(4).replace(Regex("[^A-Za-z0-9]"), "?")
+        }
         MainActivity.prefs(act).edit().putString("aiKey", k).apply()
         return "ok"
     }

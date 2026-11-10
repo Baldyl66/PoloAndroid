@@ -2825,17 +2825,26 @@ async function playMusic(raw){
   function fillAi(ui){
     const N=window.PoloNative;if(!N||!N.aiStatus)return;
     let st={};try{st=JSON.parse(N.aiStatus())}catch(e){}
+    if(ui.dataset.typing)return;
     const sig=String(!!st.key)+(ui.dataset.msg||'');if(ui.dataset.sig===sig)return;ui.dataset.sig=sig;
     const b=(lab,attr,main)=>`<button ${attr} style="border:0;cursor:pointer;font:600 15px system-ui,sans-serif;padding:10px 16px;border-radius:18px;${main?'background:var(--aC0603F,#C0603F);color:#fff':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">${lab}</button>`;
     ui.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:5px;flex:none;background:${st.key?'#2E9D5B':'#B8B0A2'}"></span>`+
       `<b style="font-size:17px">Intelligence</b><small class="m" style="font-size:14px">${st.key?'Activée : Polo comprend tout et te répond':'Polo comprend seulement les commandes prévues'}</small></div>`+
       `<small class="m" style="display:block;font-size:14px;margin-top:6px;line-height:1.4">${st.key?'Gratuit avec Gemini (Google), utilise Internet seulement quand il ne connaît pas la commande.':'1. Crée une clé gratuite (compte Google) et touche « Copier ». 2. Reviens ici et touche « Coller la clé ».'}</small>`+
       (ui.dataset.msg?`<div style="margin-top:8px;font-weight:700;font-size:15px">${ui.dataset.msg}</div>`:'')+
-      `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${st.key?b('Retirer la clé','data-aiclr'):b('Créer une clé gratuite','data-ainew',true)}${b(st.key?'Remplacer la clé':'Coller la clé','data-aipaste',!!0)}</div>`;
+      `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${st.key?b('Retirer la clé','data-aiclr'):b('Créer une clé gratuite','data-ainew',true)}${b(st.key?'Remplacer par la clé copiée':'Coller la clé copiée','data-aipaste',!!0)}</div>`+
+      `<div style="display:flex;gap:8px;margin-top:10px;align-items:center"><input data-aiin type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ou tape / colle la clé ici (AIza…)" `+
+      `style="flex:1;min-width:0;height:46px;padding:0 14px;border-radius:14px;border:2px solid var(--cECE6DA,#ECE6DA);background:var(--cFBF9F5,#FBF9F5);color:inherit;font:500 16px ui-monospace,monospace">${b('Enregistrer','data-aisave',true)}</div>`;
     const q=x=>ui.querySelector(x);
     if(q('[data-ainew]'))q('[data-ainew]').onclick=()=>{if(N.openUrl)N.openUrl('https://aistudio.google.com/apikey')};
     if(q('[data-aiclr]'))q('[data-aiclr]').onclick=()=>{N.aiClearKey();ui.dataset.msg='Clé retirée.';ui.dataset.sig='';fillAi(ui)};
-    q('[data-aipaste]').onclick=()=>{const r=N.aiPasteKey();ui.dataset.msg=r==='ok'?'✓ Clé enregistrée. Dis « Polo » et pose-lui une question !':r==='empty'?'Rien à coller : copie d’abord la clé sur la page Google.':'Ce qui est copié n’est pas une clé Gemini.';
+    const msgOf=r=>r==='ok'?'✓ Clé enregistrée. Dis « Polo » et pose-lui une question !':r==='empty'?'Rien à enregistrer : copie ou tape d’abord la clé.':(()=>{const x=String(r).split(':');return 'Je ne trouve pas de clé ('+(x[1]||'?')+' caractères, commence par « '+(x[2]||'?')+' »). Une clé Gemini commence par AIza.'})();
+    const inp=q('[data-aiin]');
+    // la case ne doit pas être redessinée pendant la saisie (le rafraîchissement automatique l'effacerait)
+    inp.onfocus=()=>{ui.dataset.typing='1'};inp.onblur=()=>{setTimeout(()=>{delete ui.dataset.typing},300)};
+    const saveIn=()=>{if(!N.aiSetKey)return;const r=N.aiSetKey(inp.value||'');inp.value='';inp.blur();delete ui.dataset.typing;ui.dataset.msg=msgOf(r);if(r==='ok'&&window.__aiReset)window.__aiReset();ui.dataset.sig='';fillAi(ui)};
+    q('[data-aisave]').onclick=saveIn;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();saveIn()}e.stopPropagation()};
+    q('[data-aipaste]').onclick=()=>{const r=N.aiPasteKey();ui.dataset.msg=msgOf(r);
       if(r==='ok'&&window.__aiReset)window.__aiReset();ui.dataset.sig='';fillAi(ui)};
   }
   function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsui]').forEach(u=>{if(u.getClientRects().length)fillTts(u)});r.querySelectorAll('[data-aiui]').forEach(u=>{if(u.getClientRects().length)fillAi(u)})})}
