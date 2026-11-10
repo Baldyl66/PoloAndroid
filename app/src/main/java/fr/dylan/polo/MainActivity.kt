@@ -92,6 +92,7 @@ class MainActivity : Activity() {
         startSpotifyCallbackServer()
         MediaHub.init(this) { json -> bridge.emit("media", json) }
         PhoneHub.init(this) { type, json -> bridge.emit(type, json) }
+        CompanionLink.init(this) { type, json -> bridge.emit(type, json) }
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
 
@@ -224,10 +225,9 @@ class MainActivity : Activity() {
             Manifest.permission.READ_CALL_LOG,
             Manifest.permission.CALL_PHONE,
             Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.READ_SMS,
-            Manifest.permission.SEND_SMS
+            Manifest.permission.RECORD_AUDIO
         ).plus(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) arrayOf(Manifest.permission.ANSWER_PHONE_CALLS) else emptyArray())
+            .plus(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) arrayOf(Manifest.permission.BLUETOOTH_CONNECT) else emptyArray())
             .filter { !hasPerm(it) }
         if (wanted.isNotEmpty()) requestPermissions(wanted.toTypedArray(), 42)
     }
@@ -238,7 +238,6 @@ class MainActivity : Activity() {
             cb.invoke(origin, hasPerm(Manifest.permission.ACCESS_FINE_LOCATION), true)
             pendingGeo = null
         }
-        PhoneHub.init(this) { type, json -> bridge.emit(type, json) }
         bridge.emit("permissions", bridge.permissionsJson())
     }
 
@@ -288,7 +287,7 @@ class MainActivity : Activity() {
         spotifyCallbackServer = null
         bridge.release()
         MediaHub.release()
-        PhoneHub.release()
+        CompanionLink.release()
         webView.destroy()
         super.onDestroy()
     }

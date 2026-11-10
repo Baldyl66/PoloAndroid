@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "PoloRadio"
-include(":app")
+include(":app", ":compagnon")

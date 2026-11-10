@@ -130,7 +130,7 @@ body{background:var(--bg);overflow:hidden;font-family:system-ui,-apple-system,"S
         <button class="dbtn" data-key="musique"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg><span>Musique</span></button>
         <button class="dbtn" data-key="tel"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span id="telLabel">Téléphone</span></button>
         <button class="dbtn" data-key="contacts"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>Contacts</span></button>
-        <button class="dbtn" data-key="messages"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Messages</span></button>
+        <button class="dbtn" data-key="messages"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span>Notifications</span></button>
                 <button class="dbtn" data-key="meteo"><svg viewBox="0 0 24 24"><path d="M8 2.5v1.5M2.5 8H4M4.1 4.1l1 1M11.9 4.1l-1 1"/><path d="M5 11a3.5 3.5 0 0 1 6.2-4.2"/><path d="M9.5 20h7.5a3.5 3.5 0 0 0 .4-6.98A5 5 0 0 0 8 13a3.5 3.5 0 0 0 1.5 7z"/></svg><span>Météo</span></button>
         <button class="dbtn" data-key="reglages"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Réglages</span></button>
       </div>
@@ -1152,16 +1152,19 @@ tap($('demarrage','.r'),()=>{clearTimeout(bootT);home()});
     .mc .rb.call{background:#2E7D4F;color:#fff;box-shadow:0 6px 16px rgba(46,125,79,.35)}`;
    R.accueil.appendChild(st);
    card.classList.add('mc','none');
-   card.innerHTML=`<div class="av"><div class="ph"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="16" fill="#F3EEE6"></circle><path d="M18 92c0-18 14-30 32-30s32 12 32 30z" fill="#F3EEE6"></path></svg></div>
-      <span class="bdg"><svg viewBox="0 0 24 24"><path d="M17 7L7 17M7 9v8h8"/></svg></span></div>
-    <div class="tx"><div class="nm">Téléphone</div>
-      <div class="sub"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><b>Aucun appel récent</b><span></span></div></div>
+   /* carte « dernière notification » (remplie par loadMsgs) */
+   const BELL='<svg viewBox="0 0 100 100"><path d="M32 66V48a18 18 0 0 1 36 0v18l6 6H26z" fill="#F3EEE6"></path><path d="M44 78a6 6 0 0 0 12 0z" fill="#F3EEE6"></path></svg>';
+   card.innerHTML=`<div class="av"><div class="ph">${BELL}</div>
+      <span class="bdg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5" fill="#fff"/></svg></span></div>
+    <div class="tx" style="overflow:hidden"><div class="nm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Notifications</div>
+      <div class="sub" style="overflow:hidden"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><b>Téléphone non connecté</b><span style="overflow:hidden;text-overflow:ellipsis"></span></div></div>
     <div class="acts">
-      <button class="rb msg" aria-label="Envoyer un message"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg></button>
-      <button class="rb call" aria-label="Rappeler"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></button></div>`;
-   tap(card.querySelector('.call'),()=>{if(!window.__homeCall){go('contacts');return}startCall(false,window.__homeCall.name)});
-   tap(card.querySelector('.msg'),()=>go('messages'));
-   tap(card,()=>go('contacts'));
+      <button class="rb msg" aria-label="Écouter"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a3.5 3.5 0 0 1 0 6M18.5 6.5a7 7 0 0 1 0 11"/></svg></button>
+      <button class="rb call" aria-label="Répondre" style="display:none"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>`;
+   card.querySelector('.ph').dataset.bell=BELL;
+   tap(card.querySelector('.call'),()=>{const n=window.__homeNotif;if(n&&window.__notifOpen)window.__notifOpen(n.number,true);else go('messages')});
+   tap(card.querySelector('.msg'),()=>{const n=window.__homeNotif;if(!n){go('messages');return}if(window.__notifRead)window.__notifRead(n.number);speakOut(n.app,(n.isMsg?'Message de '+n.name+'. ':n.name+'. ')+n.last)});
+   tap(card,()=>{const n=window.__homeNotif;if(n&&window.__notifOpen)window.__notifOpen(n.number,false);else go('messages')});
   }
   {const WX={"css": "\n.sky{position:relative;overflow:hidden;background:linear-gradient(155deg,var(--aE8A87C,#E8A87C) 0%,var(--aC0603F,#C0603F) 58%,var(--a8F3E28,#8F3E28) 100%);color:#fff}\n.sky::after{content:\"\";position:absolute;inset:0;background:radial-gradient(120% 80% at 85% 0%,rgba(255,255,255,.28),transparent 60%);pointer-events:none}\n.sun{position:absolute;border-radius:50%;background:radial-gradient(circle at 38% 36%,#FFF6D2,#FFD56E 48%,#FFB443);box-shadow:0 0 24px 8px rgba(255,214,120,.55),0 0 70px 26px rgba(255,190,90,.22);animation:glow 4s ease-in-out infinite}\n.sun .rays{position:absolute;inset:-42%;width:184%;height:184%;animation:spin 36s linear infinite}\n.cloud{position:absolute;filter:drop-shadow(0 6px 10px rgba(0,0,0,.12));animation:drift 9s ease-in-out infinite alternate}\n.cloud.slow{animation-duration:14s;animation-delay:-5s;opacity:.75}\n.glass{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes drift{from{transform:translateX(-12px)}to{transform:translateX(16px)}}\n@keyframes glow{50%{box-shadow:0 0 30px 12px rgba(255,214,120,.65),0 0 90px 34px rgba(255,190,90,.28)}}\n\n.wxtint{position:absolute;inset:0;pointer-events:none;transition:background .6s ease;border-radius:inherit}\n.scene{position:absolute;z-index:1;pointer-events:none}\n.scene>*{position:absolute}\n.sc-sun{aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 38% 36%,#FFF6D2,#FFD56E 48%,#FFB443);box-shadow:0 0 18px 6px rgba(255,214,120,.55),0 0 50px 18px rgba(255,190,90,.2);animation:glow 4s ease-in-out infinite}\n.sc-sun svg{position:absolute;left:-42%;top:-42%;width:184%;height:184%;animation:spin 36s linear infinite}\n.sc-moon{aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 32%,#FFFDF3,#EEE5C6 72%);box-shadow:0 0 22px 6px rgba(255,248,220,.35);animation:glowm 5s ease-in-out infinite}\n.sc-moon::before,.sc-moon::after{content:\"\";position:absolute;border-radius:50%;background:rgba(200,188,150,.45)}\n.sc-moon::before{width:22%;height:22%;left:52%;top:26%}.sc-moon::after{width:14%;height:14%;left:30%;top:58%}\n.sc-cloud{aspect-ratio:64/40;animation:drift 9s ease-in-out infinite alternate;filter:drop-shadow(0 4px 8px rgba(0,0,0,.14))}\n.sc-cloud svg{display:block;width:100%;height:100%}\n.sc-cloud.b{animation-duration:13s;animation-delay:-6s}\n.sc-drop{width:4.2%;height:22%;border-radius:4px;background:linear-gradient(rgba(220,235,255,.2),#fff);animation:fall .95s linear infinite;opacity:0}\n.sc-flake{width:6%;aspect-ratio:1;border-radius:50%;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.8);animation:flake 3.2s linear infinite;opacity:0}\n.sc-bolt{animation:flash 3.4s linear infinite;filter:drop-shadow(0 0 8px rgba(255,230,120,.9))}\n.sc-bolt svg{display:block;width:100%;height:auto}\n.sc-fog{height:7%;border-radius:99px;background:rgba(255,255,255,.8);animation:drift 6s ease-in-out infinite alternate}\n.sc-fog.b{animation-duration:8s;animation-direction:alternate-reverse;opacity:.7}\n.sc-star{width:3.2%;aspect-ratio:1;border-radius:50%;background:#fff;box-shadow:0 0 6px #fff;animation:tw 2.4s ease-in-out infinite}\n@keyframes fall{0%{transform:translateY(-40%);opacity:0}15%{opacity:1}100%{transform:translateY(260%);opacity:0}}\n@keyframes flake{0%{transform:translate(0,-20%);opacity:0}15%{opacity:1}50%{transform:translate(120%,300%)}100%{transform:translate(-40%,620%);opacity:0}}\n@keyframes flash{0%,62%,100%{opacity:0}64%{opacity:1}67%{opacity:.25}70%,84%{opacity:1}}\n@keyframes tw{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}\n@keyframes glowm{50%{box-shadow:0 0 30px 10px rgba(255,248,220,.5)}}\n", "html": "<div class=\"sky\" style=\"position:absolute;inset:0;border-radius:20px\">\n<div class=\"wxtint\"><\/div>\n<div class=\"scene\" data-scene style=\"right:12px;top:calc(50% - 30px);width:76px;height:62px\"><\/div>\n<div style=\"position:relative;z-index:1;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 20px\">\n<div style=\"font-size:36px;font-weight:700;line-height:1;letter-spacing:-1px;text-shadow:0 2px 10px rgba(0,0,0,.15)\" data-wx-temp>14°<\/div>\n<div style=\"font-size:15px;font-weight:600;margin-top:6px\" data-wx-label>Ensoleillé<\/div>\n<div style=\"font-size:13px;opacity:.85;display:flex;align-items:center;gap:4px\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" style=\"fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round\"><path d=\"M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z\"/><circle cx=\"12\" cy=\"9\" r=\"2.5\"/><\/svg><span data-wx-city>Perpignan<\/span><\/div>\n<\/div><\/div>"};const card=$('accueil','svg[aria-label="Ensoleillé"]').parentElement;
    const st=document.createElement('style');st.textContent=WX.css;R.accueil.appendChild(st);
@@ -1321,14 +1324,16 @@ tap($('recherche','#qmic'),dictateDest);
 
   let sel=0;
   const list=$('messages','#convList'),feed=$('messages','#feed');
-  const prevOf=c=>{const m=c.msgs.filter(x=>x[0]!=='day').pop();return (m[0]==='out'?'Vous : ':'')+m[1]};
-  const avHTML=(i,sz,num)=>`<span class="av" style="width:${sz}px;height:${sz}px;background:linear-gradient(135deg,${GR[i%GR.length][0]},${GR[i%GR.length][1]});position:relative;overflow:hidden">${SIL}${num&&!String(num).startsWith('notif:')?`<img src="/photo/${encodeURIComponent(num)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.remove()">`:''}</span>`;
+  const prevOf=c=>{if(c.pv)return c.pv;const m=c.msgs.filter(x=>x[0]!=='day').pop();return m?(m[0]==='out'?'Vous : ':'')+m[1]:''};
+  $('messages','.h1').textContent='Notifications';
+  const avHTML=(i,sz,num,letter)=>`<span class="av" style="width:${sz}px;height:${sz}px;background:linear-gradient(135deg,${GR[i%GR.length][0]},${GR[i%GR.length][1]});position:relative;overflow:hidden">${letter?`<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:${Math.round(sz*.42)}px">${escH(letter.charAt(0).toUpperCase())}</span>`:SIL}${num&&/^\+?[0-9 .-]{6,}$/.test(num)?`<img src="/photo/${encodeURIComponent(num)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.remove()">`:''}</span>`;
   function renderList(){
     window.__convCount=CONVS.length;
-    if(!CONVS.length){list.innerHTML=`<div class="empty">${EMPTY_IC}<b>Aucun message</b><span>Les SMS de ton téléphone apparaîtront ici quand il sera connecté à l’autoradio.</span></div>`;$('messages','#unreadPill').style.display='none';return}
-    list.innerHTML=CONVS.map((c,i)=>`<div class="cv${i===sel?' sel':''}${c.un?' un':''}" data-i="${i}"><span class="avw">${avHTML(i,52,c.number)}${c.un?'<span class="dot"></span>':''}</span>
+    if(!CONVS.length){list.innerHTML=`<div class="empty">${EMPTY_IC}<b>Aucune notification</b><span>${window.__phoneLinked?'Les notifications de ton téléphone apparaîtront ici.':'Ouvre Polo Compagnon sur ton téléphone et active le partage de connexion.'}</span></div>`;$('messages','#unreadPill').style.display='none';return}
+    $('messages','#unreadPill').style.display='';
+    list.innerHTML=CONVS.map((c,i)=>`<div class="cv${i===sel?' sel':''}${c.un?' un':''}" data-i="${i}"><span class="avw">${avHTML(i,52,c.number,c.isMsg?null:c.app)}${c.un?'<span class="dot"></span>':''}</span>
       <div class="tx"><div class="nm"><span>${escH(c.name)}</span><small>${c.time}</small></div><div class="pv"><span>${escH(prevOf(c))}</span>${c.un?`<span class="n">${c.un}</span>`:''}</div></div></div>`).join('');
-    list.querySelectorAll('.cv').forEach(r=>tap(r,()=>{sel=+r.dataset.i;CONVS[sel].un=0;if(window.PoloNative&&PoloNative.markRead)PoloNative.markRead(CONVS[sel].number);renderList();renderChat()}));
+    list.querySelectorAll('.cv').forEach(r=>tap(r,()=>{sel=+r.dataset.i;CONVS[sel].un=0;if(window.__notifRead)window.__notifRead(CONVS[sel].number);renderList();renderChat()}));
     const u=CONVS.reduce((a,c)=>a+c.un,0),pill=$('messages','#unreadPill');pill.textContent=u?u+(u>1?' non lus':' non lu'):'Tout est lu';pill.style.opacity=u?1:.6;
   }
   function renderChat(){
@@ -1337,17 +1342,21 @@ tap($('recherche','#qmic'),dictateDest);
     const c=CONVS[sel];$('messages','#chName').textContent=c.name;document.querySelector('#kbd .to').textContent='À '+c.name;$('messages','#chAv').outerHTML;const av=$('messages','#chAv');
     av.style.background=`linear-gradient(135deg,${GR[sel%GR.length][0]},${GR[sel%GR.length][1]})`;
     $('messages','#chSub').textContent=c.sub;
+    if(c.un&&current==='messages'&&window.__notifRead)setTimeout(()=>window.__notifRead(c.number),0);
+    const can=c.canReply!==false,ft=$('messages','.ft'),cb=$('messages','.callb');if(ft)ft.style.display=can?'':'none';if(cb)cb.style.display='none';
+    const chips=$('messages','.chips');if(chips&&can){chips.innerHTML=(c.replies||[]).map(r=>`<button class="chip">${escH(r)}</button>`).join('');chips.querySelectorAll('.chip').forEach(b=>tap(b,()=>send(b.textContent.trim())))}
     const lastOut=c.msgs.map(m=>m[0]).lastIndexOf('out');
     feed.innerHTML=c.msgs.map((m,i)=>m[0]==='day'?`<div class="day">${m[1]}</div>`:`<div class="b ${m[0]}" style="animation-delay:${(i*.05).toFixed(2)}s">${escH(m[1])}</div>`+(i===lastOut?'<div class="meta mr">Envoyé ✓</div>':'')).join('');
     feed.scrollTop=feed.scrollHeight;
   }
-  function send(t){const c=CONVS[sel];if(!c)return;let r='ok';if(window.PoloNative&&PoloNative.sendSms)r=PoloNative.sendSms(c.number,t);if(r!=='ok'){const why={noreply:'Impossible de répondre à cette conversation depuis l’autoradio.',noperm:'Autorise l’envoi de SMS dans les autorisations de l’application.',nosim:'Pas de carte SIM dans l’autoradio : réponse impossible par SMS.'}[r]||'Envoi impossible.';if(window.PoloNative&&PoloNative.speak)PoloNative.speak(why);alert(why);return}c.un=0;c.msgs.push(['out',t]);c.time=hhmm(new Date());c.sub='Envoyé à '+c.time;
+  function send(t){const c=CONVS[sel];if(!c)return;let r='ok';if(window.PoloNative&&PoloNative.phoneReply)r=PoloNative.phoneReply(c.number,t);if(r!=='ok'){const why=r==='offline'?'Téléphone non connecté : réponse impossible pour le moment.':'Envoi impossible.';if(window.PoloNative&&PoloNative.speak)PoloNative.speak(why);alert(why);return}c.un=0;if(window.__notifRead)window.__notifRead(c.number);c.msgs.push(['out',t]);c.time=hhmm(new Date());c.sub='Envoyé à '+c.time;
     feed.querySelectorAll('.meta.mr').forEach(e=>e.remove());
     feed.insertAdjacentHTML('beforeend',`<div class="b out">${t.replace(/</g,'&lt;')}</div><div class="meta mr">Envoyé ✓</div>`);
     feed.scrollTo({top:feed.scrollHeight,behavior:'smooth'});renderList();
     }
   renderList();renderChat();
-  window.setConversations=a=>{const k=CONVS[sel]&&CONVS[sel].number;CONVS.length=0;a.forEach(x=>CONVS.push(x));sel=Math.max(0,CONVS.findIndex(c=>c.number===k));renderList();renderChat()};window.__selectConv=k=>{const i=CONVS.findIndex(c=>c.number===k);if(i>=0){sel=i;CONVS[i].un=0;renderList();renderChat()}};
+  window.setConversations=a=>{const k=CONVS[sel]&&CONVS[sel].number;CONVS.length=0;a.forEach(x=>CONVS.push(x));sel=Math.max(0,CONVS.findIndex(c=>c.number===k));renderList();renderChat()};window.__selectConv=k=>{const i=CONVS.findIndex(c=>c.number===k);if(i>=0){sel=i;CONVS[i].un=0;if(window.__notifRead)window.__notifRead(k);renderList();renderChat()}};
+  window.__notifOpen=(k,reply)=>{go('messages');window.__selectConv(k);const c=CONVS[sel];if(reply&&c&&c.number===k&&c.canReply)listen('Réponse à '+c.name,t=>{setDraft(t);openKbd()})};
   const st=document.createElement('style');st.textContent=`.pillc,.cv .dot,.cv .n{background:var(--notif,var(--aB5573A,#B5573A)) !important}.r>.c:first-child{min-height:0;overflow:hidden;display:flex;flex-direction:column}#convList{display:flex;flex-direction:column;gap:8px;padding-top:6px;flex:1 1 auto;min-height:0;overflow-y:auto !important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-y}#convList::-webkit-scrollbar{display:none}#convList .cv{flex:none}`;R.messages.appendChild(st);
   tap($('messages','.callb'),()=>startCall());
   $$('messages','.chip').forEach(b=>tap(b,()=>send(b.textContent.trim())));
@@ -1662,7 +1671,7 @@ if(NATIVE){
   }
   window.PoloNativeEvent=(type,data)=>{
     if(type==='media')applyMedia(data);
-    if(type==='spotifyAuth'&&window.__spAuth)window.__spAuth(data.url);if(type==='call'&&window.__call)window.__call(data);if(type==='sms'&&window.__sms)window.__sms(data);
+    if(type==='spotifyAuth'&&window.__spAuth)window.__spAuth(data.url);if(type==='call'&&window.__call)window.__call(data);if(type==='sms'&&window.__sms)window.__sms(data);if((type==='notif'||type==='link')&&window.__notif)window.__notif(type==='notif'?data:{type:'link'});
     if(type==='speech'&&window.__speech)window.__speech(data);
     if(type==='tts'&&window.__tts)window.__tts(data);
     if(type==='resume'||type==='permissions'){try{applyMedia(JSON.parse(NATIVE.media()))}catch(e){}loadPhone()}
@@ -1714,14 +1723,9 @@ if(NATIVE){
       favs.querySelectorAll('.fv').forEach(b=>{const c=pick[+b.dataset.i];b.addEventListener('click',()=>dial(c.name,c.number))});
       const hd=$$('contacts','.hd .m').find(x=>/contacts/.test(x.textContent));if(hd)hd.textContent=cts.length+' contacts';
     }
-    // bloc « appel manqué » de l'accueil
     lastMissed=log.find(c=>c.kind==='missed')||null;
-    const mc=$('accueil','.mc');
-    if(mc){const c=lastMissed||log[0];window.__homeCall=c||null;mc.classList.toggle('none',!lastMissed);
-      if(c){mc.querySelector('.nm').textContent=c.name;mc.querySelector('.sub b').textContent=c.kind==='missed'?'Appel manqué':c.kind==='out'?'Appel sortant':'Appel entrant';mc.querySelector('.sub span').textContent='· '+when(c.date)}}
   }
-  // rappeler depuis l'accueil, appeler depuis le clavier : vrais appels
-  {const mc=$('accueil','.mc');if(mc){const b=mc.querySelector('.call');b.addEventListener('click',()=>{const c=window.__homeCall;if(c)NATIVE.call(c.number)})}}
+  // appeler depuis le clavier : vrais appels
   kCall.addEventListener('click',()=>{if(!kInCall&&knum)NATIVE.call(knum)});
   $$('messages','.callb').forEach(b=>b.addEventListener('click',()=>{}));
   loadPhone();setInterval(loadPhone,30000);
@@ -2136,37 +2140,81 @@ boot();
     }
   };
 
-  // ---- messages ----
-  function loadMsgs(){
-    let a=[];try{a=JSON.parse(N.messages())}catch(e){}
-    if(!window.setConversations)return;
-    window.setConversations(a.map(c=>({name:c.name||c.phone||'Inconnu',number:c.number,time:fmt(c.time),
-      sub:c.canReply?'Reçu à '+fmt(c.time):'Lecture seule',un:c.un||0,msgs:c.msgs})));
+  // ---- notifications du téléphone (Polo Compagnon) ----
+  const UNREAD=new Set();
+  const escT=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // réponses proposées : d'abord celles du téléphone, puis selon le contenu du message
+  function suggest(n,last){
+    const out=[],add=s=>{if(out.length<4&&s&&!out.some(x=>x.toLowerCase()===s.toLowerCase()))out.push(s)};
+    (n.replies||[]).forEach(add);
+    const t=(last||'').toLowerCase();
+    if(/(t'?es|tu es|vous êtes|es-tu|êtes-vous) où|où (t'?es|tu es|es-tu|êtes-vous)/.test(t))add('Je suis en route');
+    if(/quand|quelle heure|tu arrives|t'?arrives|dans combien/.test(t))add('J’arrive bientôt');
+    if(/appel|rappel|téléphone/.test(t))add('Je te rappelle dès que possible');
+    if(/merci/.test(t))add('Avec plaisir');
+    if(/\?\s*$/.test(t)){add('Oui');add('Non')}
+    add('Je conduis, je te réponds plus tard');add('Ok 👍');add('Je te rappelle');
+    return out;
   }
-  window.__sms=d=>{
+  function toConv(n){
+    const conv=n.msg&&n.conv&&n.conv.length?n.conv:null;
+    const msgs=[['day',escT(n.app)]].concat(conv?conv.map(([f,t])=>[f==='Moi'?'out':'in',(f!==n.title&&f!=='Moi'?f+' : ':'')+t]):[['in',n.text||'']]);
+    const lastIn=(conv?conv.filter(x=>x[0]!=='Moi').map(x=>x[1]).pop():n.text)||'';
+    return {number:n.key,name:n.title||n.app,app:n.app,isMsg:!!n.msg,canReply:!!(n.msg&&n.canReply),time:fmt(n.time),
+      sub:n.app+' · '+(n.msg&&!n.canReply?'lecture seule · ':'reçu à ')+fmt(n.time),un:UNREAD.has(n.key)?1:0,
+      pv:n.app+' · '+lastIn,last:lastIn,msgs,replies:n.msg&&n.canReply?suggest(n,lastIn):[]};
+  }
+  // carte du bas de l'accueil : dernière notification arrivée
+  function homeCard(c,linked){
+    const mc=$('accueil','.mc');if(!mc)return;window.__homeNotif=c||null;
+    mc.classList.toggle('none',!(c&&c.un));
+    const ph=mc.querySelector('.ph');ph.innerHTML=c?`<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:700;background:linear-gradient(135deg,var(--aE8A87C,#E8A87C),var(--aC0603F,#C0603F))">${escT(c.app.charAt(0).toUpperCase())}</span>`:ph.dataset.bell;
+    mc.querySelector('.nm').textContent=c?c.name:'Notifications';
+    mc.querySelector('.sub b').textContent=c?c.app:(linked?'Aucune notification':'Téléphone non connecté');
+    mc.querySelector('.sub span').textContent=c?'· '+c.time+' · '+c.last:'';
+    mc.querySelector('.call').style.display=c&&c.canReply?'':'none';
+  }
+  function loadMsgs(){
+    let a=[],lk={};try{a=JSON.parse(N.phoneNotifs())}catch(e){}try{lk=JSON.parse(N.phoneLink())}catch(e){}
+    window.__phoneLinked=lk.state==='wifi'||lk.state==='bt';
+    const keys=new Set(a.map(n=>n.key));[...UNREAD].forEach(k=>{if(!keys.has(k))UNREAD.delete(k)});
+    const list=a.map(toConv);
+    homeCard(list[0],window.__phoneLinked);
+    const b=document.querySelector('.dbtn[data-key="messages"]');
+    if(b){let d=b.querySelector('.nb');if(!d&&UNREAD.size){d=document.createElement('span');d.className='nb';d.style.cssText='position:absolute;top:6px;right:22%;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:var(--notif,#e0533a);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center';b.style.position='relative';b.appendChild(d)}if(d){d.textContent=UNREAD.size;d.style.display=UNREAD.size?'':'none'}}
+    if(window.setConversations)window.setConversations(list);
+  }
+  window.__notifRead=k=>{if(UNREAD.delete(k))loadMsgs()};
+  window.__notif=d=>{
+    if(d&&d.type==='posted'&&d.item&&d.item.fresh)UNREAD.add(d.item.key);
     loadMsgs();
-    const m=d&&d.new;
-    if(m&&m.in&&ld('polo-sms-voice','1')!=='0'){
-      try{N.speak('Message de '+(m.name||'inconnu')+'. '+m.text)}catch(e){}
-    }
   };
+  window.__sms=()=>{};
   setTimeout(loadMsgs,1500);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadMsgs()});
 })();
 </script>
 <script>
 (function(){
+  function phoneRow(row){
+    let lk={};try{lk=JSON.parse(window.PoloNative.phoneLink())}catch(e){return ''}
+    const code=`<span style="letter-spacing:3px;font-variant-numeric:tabular-nums">${lk.code||'——'}</span>`;
+    const on=lk.state==='wifi'||lk.state==='bt';
+    const v=on?'Connecté en '+(lk.state==='wifi'?'Wi-Fi':'Bluetooth')+(lk.phone?' · '+lk.phone:''):lk.state==='badcode'?'Code refusé · tape '+code+' dans Polo Compagnon':'Code d’appairage : '+code;
+    return row('Téléphone (Polo Compagnon)',on,v);
+  }
   function btStat(){
     let pm={};try{pm=JSON.parse(window.PoloNative.permissionsJson())}catch(e){}
     let nc=0,nl=0;try{nc=JSON.parse(window.PoloNative.contacts()).length}catch(e){}try{nl=JSON.parse(window.PoloNative.callLog()).length}catch(e){}
     const row=(t,ok,v,last)=>`<div class="kv"${last?' style="border:0"':''}><span class="m">${t}</span><span style="display:flex;align-items:center;gap:10px;font-weight:600"><span style="width:10px;height:10px;border-radius:5px;background:${ok?'#2E9D5B':'#D9534F'}"></span>${v}</span></div>`;
     return row('Contacts',pm.contacts&&nc>0,pm.contacts?(nc?nc+' contacts':'Aucun contact synchronisé'):'Autorisation refusée')+
       row('Journal d’appels',pm.calllog&&nl>0,pm.calllog?(nl?'Synchronisé':'Vide'):'Autorisation refusée')+
+      phoneRow(row)+
       row('Musique et notifications',!!pm.media,pm.media?'Accès autorisé':'Accès aux notifications à activer',true);
   }
   function upd(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-btstat]').forEach(el=>{el.innerHTML=btStat()})})}
   if(!window.PoloNative)return;
-  setTimeout(upd,1200);document.addEventListener('click',()=>setTimeout(upd,300),true);document.addEventListener('visibilitychange',()=>{if(!document.hidden)upd()});
+  setTimeout(upd,1200);setInterval(()=>{if(document.hidden)return;document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-btstat]').forEach(el=>{if(el.getClientRects().length)el.innerHTML=btStat()})})},4000);document.addEventListener('click',()=>setTimeout(upd,300),true);document.addEventListener('visibilitychange',()=>{if(!document.hidden)upd()});
 })();
 </script>
 </body>

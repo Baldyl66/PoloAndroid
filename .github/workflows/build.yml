@@ -19,13 +19,20 @@ jobs:
         with:
           gradle-version: "8.5"
 
-      - name: Construire l'application
-        run: gradle :app:assembleRelease --no-daemon
+      - name: Construire l'autoradio et le compagnon
+        run: gradle :app:assembleRelease :compagnon:assembleRelease --no-daemon
 
-      - name: Renommer l'APK
-        run: cp app/build/outputs/apk/release/app-release.apk PoloRadio.apk
+      - name: Renommer les APK
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk PoloRadio.apk
+          cp compagnon/build/outputs/apk/release/compagnon-release.apk PoloCompagnon.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: PoloRadio-apk
           path: PoloRadio.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PoloCompagnon-apk
+          path: PoloCompagnon.apk

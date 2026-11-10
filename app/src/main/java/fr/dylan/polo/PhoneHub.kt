@@ -7,17 +7,13 @@ import android.app.RemoteInput
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.database.ContentObserver
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.provider.ContactsContract
 import android.service.notification.StatusBarNotification
 import android.telecom.TelecomManager
-import android.telephony.SmsManager
 import android.view.KeyEvent
 import android.media.AudioManager
 import org.json.JSONArray
@@ -26,12 +22,11 @@ import org.json.JSONObject
 /**
  * Appels et messages :
  *  - décrocher / raccrocher (bouton de la notification d'appel, sinon Android, sinon touche « décrocher ») ;
- *  - conversations SMS (SMS d'Android + notifications des applis de messagerie / Bluetooth de l'autoradio) ;
- *  - réponse (via la notification si possible, sinon par SMS).
+ *  - conversations vues dans les notifications des applis de messagerie / Bluetooth de l'autoradio ;
+ *  - réponse via le bouton « Répondre » de la notification (aucun accès aux SMS).
  */
 object PhoneHub {
 
-    private val main = Handler(Looper.getMainLooper())
     private var app: Context? = null
     private var emit: ((String, String) -> Unit)? = null
 
@@ -46,43 +41,10 @@ object PhoneHub {
     }
 
     private val notifConvs = LinkedHashMap<String, Conv>()
-    private var smsObserver: ContentObserver? = null
 
     fun init(ctx: Context, onEvent: (String, String) -> Unit) {
         app = ctx.applicationContext
         emit = onEvent
-        if (smsObserver == null && has(Manifest.permission.READ_SMS)) {
-            smsObserver = object : ContentObserver(main) {
-                override fun onChange(selfChange: Boolean) {
-                    main.removeCallbacks(smsChanged)
-                    main.postDelayed(smsChanged, 800)
-                }
-            }
-            try {
-                ctx.contentResolver.registerContentObserver(Uri.parse("content://sms"), true, smsObserver!!)
-            } catch (e: Exception) {
-                smsObserver = null
-            }
-        }
-    }
-
-    private var lastSmsId = -1L
-    private val smsChanged = Runnable {
-        val newest = newestSms()
-        if (newest != null && newest.optLong("id") != lastSmsId) {
-            val first = lastSmsId == -1L
-            lastSmsId = newest.optLong("id")
-            if (!first && newest.optBoolean("in")) {
-                emit?.invoke("sms", JSONObject().put("new", newest).toString())
-                return@Runnable
-            }
-        }
-        emit?.invoke("sms", "{}")
-    }
-
-    fun release() {
-        smsObserver?.let { o -> try { app?.contentResolver?.unregisterContentObserver(o) } catch (e: Exception) {} }
-        smsObserver = null
     }
 
     private fun has(p: String) = app?.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
@@ -142,7 +104,6 @@ object PhoneHub {
             c.msgs.add(m); c.unread++; added = m
         }
         while (c.msgs.size > 40) c.msgs.removeAt(0)
-        // évite de compter deux fois un SMS déjà présent dans la base SMS d'Android
         if (added != null) {
             val ev = JSONObject().put("name", c.name).put("text", added.text).put("key", key).put("in", true)
             emit?.invoke("sms", JSONObject().put("new", ev).toString())
@@ -213,57 +174,9 @@ object PhoneHub {
 
     // ===================== messages =====================
 
-    private fun newestSms(): JSONObject? {
-        if (!has(Manifest.permission.READ_SMS)) return null
-        return try {
-            app!!.contentResolver.query(Uri.parse("content://sms"), arrayOf("_id", "address", "body", "type"),
-                null, null, "date DESC")?.use {
-                if (!it.moveToFirst()) null else {
-                    val addr = it.getString(1) ?: ""
-                    JSONObject().put("id", it.getLong(0)).put("key", addr).put("text", it.getString(2) ?: "")
-                        .put("in", it.getInt(3) == 1).put("name", nameFor(addr) ?: addr)
-                }
-            }
-        } catch (e: Exception) { null }
-    }
-
     /** Toutes les conversations, la plus récente en premier. */
     fun conversationsJson(): String {
-        val convs = LinkedHashMap<String, Conv>()
-        if (has(Manifest.permission.READ_SMS)) {
-            try {
-                app!!.contentResolver.query(Uri.parse("content://sms"), arrayOf("address", "body", "date", "type", "read"),
-                    null, null, "date DESC")?.use {
-                    var rows = 0
-                    while (it.moveToNext() && rows < 600) {
-                        rows++
-                        val addr = it.getString(0) ?: continue
-                        val type = it.getInt(3)
-                        if (type != 1 && type != 2) continue
-                        val k = addr.replace(Regex("[^+0-9]"), "").takeLast(9).ifEmpty { addr }
-                        val c = convs[k] ?: run {
-                            if (convs.size >= 30) return@run null
-                            Conv(addr, addr, addr).also { c -> convs[k] = c }
-                        } ?: continue
-                        if (c.msgs.size >= 30) continue
-                        c.msgs.add(0, Msg(type == 1, it.getString(1) ?: "", it.getLong(2)))
-                        if (type == 1 && it.getInt(4) == 0) c.unread++
-                    }
-                }
-                for (c in convs.values) c.name = nameFor(c.number) ?: c.number ?: c.name
-            } catch (e: Exception) {
-            }
-        }
-        // conversations vues dans les notifications (si elles ne sont pas déjà dans les SMS)
-        for (c in notifConvs.values) {
-            val dup = convs.values.firstOrNull { it.name == c.name }
-            if (dup != null) {
-                dup.reply = c.reply
-                for (m in c.msgs) if (dup.msgs.none { it.text == m.text }) dup.msgs.add(m)
-                dup.msgs.sortBy { it.time }
-            } else convs[c.key] = c
-        }
-        val list = convs.values.sortedByDescending { c -> c.msgs.lastOrNull()?.time ?: 0L }
+        val list = notifConvs.values.sortedByDescending { c -> c.msgs.lastOrNull()?.time ?: 0L }
         val out = JSONArray()
         for (c in list) {
             if (c.msgs.isEmpty()) continue
@@ -272,7 +185,7 @@ object PhoneHub {
             out.put(JSONObject()
                 .put("name", c.name).put("number", c.key).put("phone", c.number ?: "")
                 .put("time", c.msgs.last().time).put("un", c.unread).put("msgs", msgs)
-                .put("canReply", c.reply != null || (!c.number.isNullOrBlank() && has(Manifest.permission.SEND_SMS))))
+                .put("canReply", c.reply != null))
         }
         return out.toString()
     }
@@ -284,29 +197,16 @@ object PhoneHub {
     /** Répond à une conversation. Renvoie "ok", ou la raison de l'échec. */
     fun reply(key: String, text: String): String {
         val ctx = app ?: return "error"
-        // 1. par la notification de l'appli de messagerie (marche aussi pour le Bluetooth de certains autoradios)
+        // par le bouton « Répondre » de la notification de l'appli de messagerie
         val viaNotif = notifConvs[key]?.reply ?: notifConvs.values.firstOrNull { it.name == (nameFor(key) ?: key) }?.reply
-        if (viaNotif != null) {
-            try {
-                val intent = Intent()
-                val bundle = Bundle()
-                for (ri in viaNotif.remoteInputs) bundle.putCharSequence(ri.resultKey, text)
-                RemoteInput.addResultsToIntent(viaNotif.remoteInputs, intent, bundle)
-                viaNotif.actionIntent.send(ctx, 0, intent)
-                return "ok"
-            } catch (e: PendingIntent.CanceledException) {
-            } catch (e: Exception) {
-            }
-        }
-        // 2. par SMS (nécessite une carte SIM dans l'autoradio)
-        val number = if (key.startsWith("notif:")) notifConvs[key]?.number else key
-        if (number.isNullOrBlank()) return "noreply"
-        if (!has(Manifest.permission.SEND_SMS)) return "noperm"
+            ?: return "noreply"
         return try {
-            @Suppress("DEPRECATION")
-            val sms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) ctx.getSystemService(SmsManager::class.java) else SmsManager.getDefault()
-            sms.sendMultipartTextMessage(number, null, sms.divideMessage(text), null, null)
+            val intent = Intent()
+            val bundle = Bundle()
+            for (ri in viaNotif.remoteInputs) bundle.putCharSequence(ri.resultKey, text)
+            RemoteInput.addResultsToIntent(viaNotif.remoteInputs, intent, bundle)
+            viaNotif.actionIntent.send(ctx, 0, intent)
             "ok"
-        } catch (e: Exception) { "nosim" }
+        } catch (e: PendingIntent.CanceledException) { "noreply" } catch (e: Exception) { "noreply" }
     }
 }

@@ -103,6 +103,13 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
     @JavascriptInterface fun markRead(key: String) = PhoneHub.markRead(key)
     @JavascriptInterface fun sendSms(key: String, text: String): String = PhoneHub.reply(key, text)
 
+    // ---------- notifications du téléphone (appli Polo Compagnon) ----------
+
+    @JavascriptInterface fun phoneNotifs(): String = CompanionLink.itemsJson()
+    @JavascriptInterface fun phoneReply(key: String, text: String): String = CompanionLink.reply(key, text)
+    @JavascriptInterface fun phoneDismiss(key: String): Boolean = CompanionLink.dismiss(key)
+    @JavascriptInterface fun phoneLink(): String = CompanionLink.stateJson()
+
     /** Dernier plantage enregistré (vide s'il n'y en a pas). */
     @JavascriptInterface
     fun crashLog(): String = try {

@@ -87,7 +87,7 @@ Pour revenir à l'écran d'origine : même réglage, choisis l'ancien lanceur.
 - **Pause de la musique pendant un appel** : détectée via l'état téléphone / audio de l'autoradio ; sur les modèles
   dont l'appli Bluetooth ne le signale pas, l'appli de musique gère elle-même la pause.
 - **Limitation de vitesse** : affichée seulement quand elle est renseignée dans OpenStreetMap.
-- **Messages (SMS)** : viennent des SMS d'Android et des notifications des applis de messagerie (dont le Bluetooth de certains autoradios). La réponse passe par la notification quand c'est possible, sinon par SMS (il faut alors une carte SIM dans l'autoradio).
+- **Messages** : viennent uniquement des notifications des applis de messagerie (dont le Bluetooth de certains autoradios). Polo Radio n'a aucun accès aux SMS : la réponse passe par le bouton « Répondre » de la notification, et seulement s'il existe.
 - **Assistant vocal** : nécessite les services Google (ou un autre moteur de reconnaissance vocale) sur l'autoradio
   et une connexion internet.
 - Il faut une connexion internet (partage de connexion du téléphone) pour la carte, les itinéraires, la recherche et la météo.

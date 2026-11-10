@@ -14,9 +14,10 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!-- Décrocher / raccrocher depuis l'écran -->
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
-    <!-- Lire les SMS et y répondre -->
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Liaison avec l'appli Polo Compagnon du téléphone (Wi-Fi puis Bluetooth) -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <!-- Assistant vocal (reconnaissance de la voix) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Démarrage automatique avec la voiture -->
