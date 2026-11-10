@@ -2657,6 +2657,8 @@ async function playMusic(raw){
         after=()=>askYes(()=>{const p=savedPlace(trip.name);reply('C’est parti.');startRoute(trip.name,null,false,(p&&p.ll)||trip.ll)})}
       else if(!playing&&load('polo-was-playing')==='1'){q='est-ce que je remets ta musique ?';after=()=>askYes(()=>{if(!playing)togglePlay();reply('C’est parti.')})}
     }
+    // pas de question au démarrage : l'assistant ne doit jamais s'ouvrir tout seul
+    q=null;after=null;
     const dc=dayClauses(ev),cl=dc.concat(others.length?[bdayClause(others,dc.length>0)]:[]);
     let body=cl.length?(dc.length?'Aujourd’hui '+listTxt(cl):cap(listTxt(cl))):'';
     let txt=hello;

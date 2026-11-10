@@ -57,10 +57,14 @@ object NeuralTts {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                     .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                         .setSampleRate(sr).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                    .setBufferSizeInBytes(sr * 4 * 30)
+                    // Android 12+ : grand tampon, lecture lancée dès 0,1 s de son (sinon Android attend
+                    // que le tampon soit plein… et une phrase courte ne sortait jamais). Avant : tampon de 3 s.
+                    .setBufferSizeInBytes(sr * 4 * (if (android.os.Build.VERSION.SDK_INT >= 31) 30 else 3))
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
+                if (android.os.Build.VERSION.SDK_INT >= 31) try { t.setStartThresholdInFrames(sr / 10) } catch (e: Exception) {}
                 track = t
+                t.play()
                 var frames = 0L
                 val lead = FloatArray(sr / 20)   // petit silence : la 1re syllabe n'est pas mangée
                 val t0 = android.os.SystemClock.elapsedRealtime()
@@ -72,15 +76,25 @@ object NeuralTts {
                         t.write(lead, 0, lead.size, AudioTrack.WRITE_BLOCKING); frames += lead.size
                     }
                     t.write(samples, 0, samples.size, AudioTrack.WRITE_BLOCKING); frames += samples.size
-                    if (t.playState != AudioTrack.PLAYSTATE_PLAYING) t.play()
                     1
                 }
                 android.util.Log.i("PoloTts", "voix $voice : ${frames * 1000 / sr} ms d'audio, 1re phrase en $first ms, tout en ${android.os.SystemClock.elapsedRealtime() - t0} ms")
                 if (myGen == generation) {
+                    // stop() en flux : joue tout ce qui reste dans le tampon, même s'il n'est pas plein
+                    try { t.stop() } catch (e: Exception) {}
                     // attend que tout le son écrit soit vraiment joué
                     val end = android.os.SystemClock.elapsedRealtime() + frames * 1000 / sr + 2000
-                    while (myGen == generation && t.playbackHeadPosition < frames && android.os.SystemClock.elapsedRealtime() < end) Thread.sleep(40)
-                    ok = myGen == generation
+                    var maxHead = 0
+                    while (myGen == generation && android.os.SystemClock.elapsedRealtime() < end) {
+                        val h = t.playbackHeadPosition
+                        if (h > maxHead) maxHead = h
+                        if (h >= frames) break
+                        // certaines versions remettent la position à 0 une fois tout joué
+                        if (maxHead > 0 && h == 0 && t.playState == AudioTrack.PLAYSTATE_STOPPED) break
+                        Thread.sleep(40)
+                    }
+                    android.util.Log.i("PoloTts", "lecture : $maxHead / $frames images jouées")
+                    ok = myGen == generation && maxHead > 0
                 }
             } catch (e: Throwable) {
                 ok = false
