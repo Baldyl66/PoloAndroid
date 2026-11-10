@@ -187,12 +187,11 @@ class MainActivity : Activity() {
             has && !editingCode, if (has && !editingCode) "Modifier" to { editingCode = true; buildSteps() } else null))
         if (!has || editingCode) steps.addView(codeEntry())
         divider()
-        val infoOk = PhoneInfo.has(this, Manifest.permission.READ_CONTACTS) && PhoneInfo.has(this, Manifest.permission.READ_CALENDAR)
-        steps.addView(step(4, "Contacts et agenda",
-            if (infoOk) "Autorisé · anniversaires et rendez-vous envoyés à l'autoradio" else "Pour que l'assistant connaisse les anniversaires et ton agenda",
-            infoOk, if (infoOk) null else "Autoriser" to {
-                requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR), 8)
-            }))
+        val wanted = arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR, Manifest.permission.SEND_SMS)
+        val infoOk = wanted.all { PhoneInfo.has(this, it) }
+        steps.addView(step(4, "Contacts, agenda et messages",
+            if (infoOk) "Autorisé · anniversaires, rendez-vous et messages dictés" else "Pour les anniversaires, ton agenda et envoyer un message à la voix",
+            infoOk, if (infoOk) null else "Autoriser" to { requestPermissions(wanted, 8) }))
     }
 
     private fun divider() = steps.addView(View(this).apply {

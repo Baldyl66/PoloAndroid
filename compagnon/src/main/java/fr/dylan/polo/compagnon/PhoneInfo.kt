@@ -101,6 +101,42 @@ object PhoneInfo {
         (ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager).nextAlarmClock?.triggerTime ?: 0L
     } catch (e: Exception) { 0L }
 
+    /**
+     * Envoie un SMS à un contact du téléphone, demandé à la voix depuis l'autoradio.
+     * Renvoie "ok", "noperm", "nocontact" ou "error".
+     */
+    fun sendSms(ctx: Context, name: String, text: String): String {
+        if (text.isBlank()) return "error"
+        if (!has(ctx, Manifest.permission.SEND_SMS) || !has(ctx, Manifest.permission.READ_CONTACTS)) return "noperm"
+        val number = findNumber(ctx, name) ?: return "nocontact"
+        return try {
+            @Suppress("DEPRECATION")
+            val sms = if (android.os.Build.VERSION.SDK_INT >= 31) ctx.getSystemService(android.telephony.SmsManager::class.java)
+                else android.telephony.SmsManager.getDefault()
+            sms.sendMultipartTextMessage(number, null, sms.divideMessage(text), null, null)
+            "ok"
+        } catch (e: Exception) { "error" }
+    }
+
+    /** Numéro d'un contact : nom exact, sinon nom qui commence pareil, sinon prénom. */
+    private fun findNumber(ctx: Context, name: String): String? {
+        val wanted = name.trim().lowercase()
+        if (wanted.isEmpty()) return null
+        val all = ArrayList<Pair<String, String>>()
+        try {
+            ctx.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER,
+                    ContactsContract.CommonDataKinds.Phone.IS_SUPER_PRIMARY),
+                null, null, ContactsContract.CommonDataKinds.Phone.IS_SUPER_PRIMARY + " DESC"
+            )?.use { c -> while (c.moveToNext()) { val n = c.getString(0) ?: continue; val num = c.getString(1) ?: continue; all.add(n.lowercase() to num) } }
+        } catch (e: Exception) {
+            return null
+        }
+        return (all.firstOrNull { it.first == wanted } ?: all.firstOrNull { it.first.startsWith(wanted) }
+            ?: all.firstOrNull { it.first.split(" ").contains(wanted) })?.second
+    }
+
     /** Batterie du téléphone : {pct, charging}. */
     private fun battery(ctx: Context): JSONObject {
         val i: Intent? = try { ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (e: Exception) { null }

@@ -1684,7 +1684,7 @@ if(NATIVE){
   }
   window.PoloNativeEvent=(type,data)=>{
     if(type==='media')applyMedia(data);
-    if(type==='spotifyAuth'&&window.__spAuth)window.__spAuth(data.url);if(type==='call'&&window.__call)window.__call(data);if(type==='sms'&&window.__sms)window.__sms(data);if(type==='wake'&&window.__assistant)window.__assistant(true);if(type==='phoneinfo'&&window.__phoneInfo)window.__phoneInfo();if((type==='notif'||type==='link')&&window.__notif)window.__notif(type==='notif'?data:{type:'link'});
+    if(type==='spotifyAuth'&&window.__spAuth)window.__spAuth(data.url);if(type==='call'&&window.__call)window.__call(data);if(type==='sms'&&window.__sms)window.__sms(data);if(type==='wake'&&window.__assistant)window.__assistant(true);if(type==='phoneinfo'&&window.__phoneInfo)window.__phoneInfo();if(type==='smsresult'&&window.__smsResult)window.__smsResult(data);if((type==='notif'||type==='link')&&window.__notif)window.__notif(type==='notif'?data:{type:'link'});
     if(type==='speech'&&window.__speech)window.__speech(data);
     if(type==='tts'&&window.__tts)window.__tts(data);
     if(type==='resume'||type==='permissions'){try{applyMedia(JSON.parse(NATIVE.media()))}catch(e){}loadPhone()}
@@ -2489,25 +2489,62 @@ boot();
     return 0;
   }
 
-  // au démarrage : court et naturel, une phrase par sujet, dites d'un seul souffle
+  // au démarrage : une phrase naturelle qui enchaîne la journée, avec une seule question à la fin
   let greeted=false;
   const first=w=>String(w||'').split(' ')[0];
   const lc=s=>/^[A-ZÀ-Ý][a-zà-ÿ]/.test(s)?s.charAt(0).toLowerCase()+s.slice(1):s;   // « Dentiste » → « dentiste », « EDF » reste
-  // « Paul fête ses 36 ans aujourd'hui » / « C'est l'anniversaire de Paul et de Julie aujourd'hui »
-  function bdayTxt(list,askCall){
-    const one=list.length===1,x=list[0],age=one&&x.y>1900?new Date().getFullYear()-x.y:0;
-    const s=one?(age?first(x.who)+' fête ses '+age+' ans aujourd’hui':'C’est l’anniversaire de '+first(x.who)+' aujourd’hui')
-      :'C’est l’anniversaire de '+listTxt(list.slice(0,3).map(y=>first(y.who))).replace(' et ',' et de ')+' aujourd’hui';
-    return s+(askCall?(one?', tu veux l’appeler ?':', tu veux appeler '+first(x.who)+' ?'):'.');
+  // « rendez-vous au dentiste », « rendez-vous à la banque », sinon le titre tel quel (« réunion client »)
+  const AU=/^(dentiste|medecin|docteur|garage|coiffeur|kine|kinesitherapeute|cinema|restaurant|resto|sport|travail|bureau|foot|stade|marche|supermarche|pressing|controle technique|ophtalmo|veterinaire|notaire)$/;
+  const ALA=/^(banque|mairie|poste|pharmacie|salle|gym|piscine|boulangerie|gare|plage|clinique|prefecture|laverie)$/;
+  function evPhrase(e){
+    const t=e.title.trim(),k=norm(t),h=e.allDay?'':' à '+hourTxt(e.start);
+    if(AU.test(k))return 'rendez-vous au '+lc(t)+h;
+    if(ALA.test(k))return 'rendez-vous à la '+lc(t)+h;
+    return lc(t).replace(/^rdv\b/i,'rendez-vous')+h;
   }
-  // « C'est jour férié aujourd'hui. » puis « Au programme : dentiste à 14 heures 30. »
-  function eventsTxt(ev){
+  // « c'est jour férié », « tu as rendez-vous au dentiste à 14 heures 30, puis réunion client à 17 heures »
+  function dayClauses(ev){
     const day=ev.filter(e=>e.allDay),timed=ev.filter(e=>!e.allDay),out=[];
-    if(day.length)out.push('C’est '+listTxt(day.slice(0,2).map(e=>lc(e.title)))+' aujourd’hui.');
-    if(timed.length){const p=timed.slice(0,3).map(e=>lc(e.title)+' à '+hourTxt(e.start));
-      out.push('Au programme : '+p[0]+(p.length>2?', '+p[1]+' et '+p[2]:p.length>1?', puis '+p[1]:'')+'.')}
+    if(day.length)out.push('c’est '+listTxt(day.slice(0,2).map(e=>lc(e.title))));
+    if(timed.length){const p=timed.slice(0,3).map(evPhrase);out.push('tu as '+p[0]+(p.length>2?', '+p[1]+' et '+p[2]:p.length>1?', puis '+p[1]:''))}
     return out;
   }
+  // « Paul fête ses 36 ans aujourd'hui » / « c'est l'anniversaire de Paul et de Julie aujourd'hui »
+  function bdayClause(list){
+    const one=list.length===1,x=list[0],age=one&&x.y>1900?new Date().getFullYear()-x.y:0;
+    return one?(age?first(x.who)+' fête ses '+age+' ans aujourd’hui':'c’est l’anniversaire de '+first(x.who)+' aujourd’hui')
+      :'c’est l’anniversaire de '+listTxt(list.slice(0,3).map(y=>first(y.who))).replace(' et ',' et de ')+' aujourd’hui';
+  }
+  const callOrMsgQ=list=>list.length===1?'est-ce que tu veux l’appeler ou lui envoyer un message ?':'est-ce que tu veux appeler '+first(list[0].who)+' ou lui envoyer un message ?';
+  // réponse à « l'appeler ou lui envoyer un message ? »
+  function callOrMessage(who){
+    listen('Appeler ou envoyer un message ?',a=>{
+      const n=norm(a);
+      if(/message|sms|ecri|texto/.test(n))return dictateMsg(who);
+      if(NO.test(a.trim()))return reply('D’accord.');
+      if(YES.test(a.trim())||/appel|telephone/.test(n))return callName(who);
+      reply('D’accord.');
+    });
+  }
+  // message dicté à un contact, envoyé par le téléphone (Polo Compagnon)
+  function dictateMsg(who,text){
+    const f=first(who);
+    const confirm=msg=>say('Assistant','J’envoie à '+f+' : '+msg+' ?',()=>listen('Envoyer ?',ok=>{
+      if(!YES.test(ok.trim()))return reply('D’accord, je n’envoie rien.');
+      const r=N.phoneSms?N.phoneSms(who,msg):'offline';
+      reply(r==='ok'?'C’est envoyé.':'Le téléphone n’est pas connecté, le message n’est pas parti.');
+    }));
+    if(text)return confirm(text);
+    say('Assistant','Qu’est-ce que tu veux dire à '+f+' ?',()=>listen('Message à '+f,confirm));
+  }
+  window.__smsResult=d=>{
+    if(!d||d.ok)return;
+    const why={noperm:'il faut autoriser les messages dans Polo Compagnon',nocontact:'je ne trouve pas '+first(d.name)+' dans les contacts du téléphone'}[d.why]||'le téléphone n’a pas réussi à l’envoyer';
+    reply('Le message n’est pas parti, '+why+'.');
+  };
+  window.__dictateMsg=dictateMsg;
+  const askYes=go=>listen('Assistant',a=>{if(YES.test(a.trim()))go();else reply('D’accord.')});
+
   function greet(){
     if(load('polo-greet')==='0'||voiceOpen||/^appel/.test(current))return;
     greeted=true;
@@ -2520,23 +2557,23 @@ boot();
     if(N&&N.getVolume&&N.setVolume&&uv){const v=+N.getVolume('media');if(v<8||v>92){N.setVolume('media',uv);if(typeof syncVol==='function')syncVol(uv)}}
     markAnn(today.map(dateId).concat(ev.map(e=>'e|'+e.title+'|'+e.start)));
     const hello=mine?'Joyeux anniversaire'+(nm?' '+nm:'')+' !':(hr>=5&&hr<12?'Bonjour':hr>=12&&hr<18?'Salut':'Bonsoir')+(nm?' '+nm:'')+' !';
-    // une seule question, toujours en fin : appeler la personne fêtée, aller au rendez-vous proche, trajet habituel, ou musique
+    // une seule question, à la fin : la personne fêtée, le rendez-vous proche, le trajet habituel, ou la musique
     const soon=ev.find(e=>!e.allDay&&e.loc&&e.start-Date.now()<3*3600e3&&e.start>Date.now());
-    let ask=null;
-    if(other)ask={go:()=>callName(other.who)};
-    else if(soon&&!routeActive)ask={q:'On y va ?',go:()=>goTo(soon.loc)};
+    let q=null,after=null;
+    if(other){q=callOrMsgQ(others);after=()=>callOrMessage(other.who)}
+    else if(soon&&!routeActive){q='est-ce qu’on y va ?';after=()=>askYes(()=>goTo(soon.loc))}
     else{const trip=!routeActive?usualTrip():null;
-      if(trip)ask={q:trip.name==='Maison'?'On rentre à la maison ?':trip.name==='Travail'?'On va au travail ?':'On va à '+trip.name+' ?',
-        go:()=>{const p=savedPlace(trip.name);reply('C’est parti.');startRoute(trip.name,null,false,(p&&p.ll)||trip.ll)}};
-      else if(!playing&&load('polo-was-playing')==='1')ask={q:'Je remets ta musique ?',go:()=>{if(!playing)togglePlay();reply('C’est parti.')}};
+      if(trip){q='est-ce que tu veux qu’on aille '+(trip.name==='Maison'?'à la maison':trip.name==='Travail'?'au travail':'à '+trip.name)+' ?';
+        after=()=>askYes(()=>{const p=savedPlace(trip.name);reply('C’est parti.');startRoute(trip.name,null,false,(p&&p.ll)||trip.ll)})}
+      else if(!playing&&load('polo-was-playing')==='1'){q='est-ce que je remets ta musique ?';after=()=>askYes(()=>{if(!playing)togglePlay();reply('C’est parti.')})}
     }
-    const parts=[hello,...eventsTxt(ev)];
-    if(others.length)parts.push(bdayTxt(others,!!other));
-    if(ask&&ask.q)parts.push(ask.q);
-    if(!ask)parts.push('Bonne route !');
-    const txt=parts.join(' ');
-    if(!ask){reply(txt);return}
-    say('Assistant',txt,()=>listen('Assistant',a=>{if(YES.test(a.trim()))ask.go();else reply('D’accord.')}));
+    const dc=dayClauses(ev),cl=dc.concat(others.length?[bdayClause(others)]:[]);
+    let body=cl.length?(dc.length?'Aujourd’hui '+listTxt(cl):cap(listTxt(cl))):'';
+    let txt=hello;
+    if(body)txt+=' '+body+(q?', '+q:'. Je te souhaite de passer une bonne route !');
+    else txt+=q?' '+cap(q):' Je te souhaite de passer une bonne route !';
+    if(!after){reply(txt);return}
+    say('Assistant',txt,after);
   }
   // infos du téléphone arrivées après la salutation : ce qui est nouveau, et la batterie faible
   window.__phoneInfo=()=>{
@@ -2545,9 +2582,9 @@ boot();
     const others=allDates().filter(x=>x.who&&x.d===d.getDate()&&x.m===d.getMonth()&&!done.includes(dateId(x)));
     const b=phoneInfo().battery,lowKey='polo-lowbat';
     const low=b&&b.pct>=0&&b.pct<=15&&!b.charging&&Date.now()-(+load(lowKey)||0)>2*3600e3;
-    if(others.length){markAnn(others.map(dateId));const o=others[0];
-      say('Assistant','Au fait, '+bdayTxt(others,true).replace(/^C’est/,'c’est'),()=>listen('Assistant',a=>{if(YES.test(a.trim()))callName(o.who);else reply('D’accord.')}));return}
-    if(low){save(lowKey,String(Date.now()));reply('Ton téléphone est à '+b.pct+' %, pense à le brancher.')}
+    if(others.length){markAnn(others.map(dateId));
+      say('Assistant','Au fait, '+bdayClause(others)+', '+callOrMsgQ(others),()=>callOrMessage(others[0].who));return}
+    if(low){save(lowKey,String(Date.now()));reply('Ton téléphone est à '+b.pct+' %, n’oublie pas de le charger avant qu’il ne s’éteigne.')}
   };
   setInterval(()=>save('polo-was-playing',playing?'1':'0'),30e3);
   window.__greet=greet;setTimeout(greet,6500);
@@ -2563,6 +2600,9 @@ boot();
     if(/(arrete|stop|annule|coupe) (la navigation|le guidage|l itineraire|le gps)/.test(n)){routeActive=false;renderGuidance();return reply('Guidage arrêté.')}
     if((m=t.match(/^(?:emm[eè]ne[- ]moi|am[eè]ne[- ]moi|conduis[- ]moi|guide[- ]moi|va|aller|allons|direction|itin[ée]raire|on va|je vais|je veux aller|route)\s+(?:à |a |au |aux |vers |chez |jusqu['’]à |pour )?(.+)$/i)))return goTo(m[1]);
     if((m=t.match(/^(?:trouve|cherche|recherche|o[uù] est)\s+(?:moi\s+)?(.+)$/i)))return goTo(m[1]);
+    // « envoie un message à Paul », « écris à Paul », « dis à Paul que j'arrive »
+    if((m=t.match(/^(?:envoie|envoyer|[ée]cris|[ée]crire)(?:[- ]lui)?(?: un)?(?: (?:message|sms|texto))?\s+(?:à|a)\s+(.+?)[.!?]*$/i)))return dictateMsg(m[1]);
+    if((m=t.match(/^dis\s+(?:à|a)\s+(.+?)\s+(?:que|qu['’])\s*(.+?)[.!]*$/i)))return dictateMsg(m[1],m[2]);
     if((m=t.match(/^(?:appelle|appeler|t[ée]l[ée]phone [aà]|t[ée]l[ée]phoner [aà])\s+(.+)$/i)))return callName(m[1]);
     if(/(lis|lire|lit|ecouter) (mes |les )?(nouveaux )?messages|(j ai|ai je|est ce que j ai) (des |un )?(nouveaux? )?messages?/.test(n))return readUnread();
     if(/^(pause|stop)$|(arrete|coupe|stoppe) (la musique|le son)/.test(n)){if(playing)togglePlay();return toast('Pause')}

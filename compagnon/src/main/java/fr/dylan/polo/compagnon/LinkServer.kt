@@ -193,6 +193,11 @@ object LinkServer {
                             write(JSONObject().put("t", "result").put("id", m.optString("id")).put("ok", ok))
                         }
                         "dismiss" -> NotifStore.dismiss(m.optString("key"))
+                        "sms" -> {
+                            val name = m.optString("name")
+                            val why = PhoneInfo.sendSms(ctx, name, m.optString("text"))
+                            write(JSONObject().put("t", "smsresult").put("name", name).put("ok", why == "ok").put("why", why))
+                        }
                     }
                 }
             } catch (e: Exception) {

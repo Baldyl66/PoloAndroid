@@ -112,6 +112,7 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
     @JavascriptInterface fun phoneDismiss(key: String): Boolean = CompanionLink.dismiss(key)
     @JavascriptInterface fun phoneLink(): String = CompanionLink.stateJson()
     @JavascriptInterface fun phoneInfo(): String = CompanionLink.infoJson()
+    @JavascriptInterface fun phoneSms(name: String, text: String): String = CompanionLink.sendSms(name, text)
 
     // ---------- réveil de l'assistant en disant « Polo » ----------
 

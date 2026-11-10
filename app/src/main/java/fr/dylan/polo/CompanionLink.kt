@@ -88,6 +88,10 @@ object CompanionLink {
 
     fun dismiss(key: String): Boolean = send(JSONObject().put("t", "dismiss").put("key", key))
 
+    /** Demande au téléphone d'envoyer un SMS à un contact. Renvoie "ok" (demande partie) ou "offline". */
+    fun sendSms(name: String, text: String): String =
+        if (send(JSONObject().put("t", "sms").put("name", name).put("text", text))) "ok" else "offline"
+
     // ===================== connexion =====================
 
     private fun loop() {
@@ -190,6 +194,7 @@ object CompanionLink {
                         synchronized(items) { items.remove(k) }
                         emitNotif(JSONObject().put("type", "removed").put("key", k))
                     }
+                    "smsresult" -> emit?.invoke("smsresult", m.toString())
                     "info" -> {
                         info = (m.optJSONObject("info") ?: JSONObject()).toString()
                         emit?.invoke("phoneinfo", info)
