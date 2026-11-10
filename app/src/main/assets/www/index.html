@@ -2265,7 +2265,7 @@ boot();
   }
   // phrases de l'assistant autour des messages et du GPS (voix naturelle, féminine ou masculine)
   const sur=a=>a?' sur '+a:'';
-  const VOICE={intro:(n,a)=>`Message de ${n}${sur(a)}.`,ask:'Tu veux répondre ?',lis:'Je t’écoute.',conf:m=>`J’envoie : ${m} ?`,
+  const VOICE={intro:(n,a)=>`Tu as un nouveau message de ${n}${sur(a)}.`,ask:'Tu veux répondre ?',lis:'Je t’écoute.',conf:m=>`J’envoie : ${m} ?`,
     sent:'Message envoyé.',cancel:'Message annulé.',no:'D’accord.',demo:'Bonjour, je serai ta voix pour la route.',
     go:(n,d,h)=>`Itinéraire calculé vers ${n}. ${d}, arrivée prévue à ${h}.`,end:'Tu es arrivé à destination.'};
   const persona=()=>VOICE;
@@ -2367,9 +2367,9 @@ boot();
   function readUnread(){
     let a=[];try{a=JSON.parse(NATIVE.phoneNotifs())}catch(e){}
     const list=a.map(toConv).filter(c=>c.isMsg&&UNREAD.has(c.number)).slice(0,3);
-    if(!list.length){reply('Aucun nouveau message.');return}
-    const next=i=>{if(i>=list.length)return;const c=list[i];if(window.__notifRead)window.__notifRead(c.number);say(c.app,readText(c),()=>next(i+1))};
-    reply(list.length>1?list.length+' nouveaux messages.':'Un nouveau message.',()=>next(0));
+    if(!list.length){reply('Tu n’as aucun nouveau message.');return}
+    const next=i=>{if(i>=list.length)return;const c=list[i];if(window.__notifRead)window.__notifRead(c.number);say(c.app,list.length>1?endDot('De '+c.name+(c.app!==c.name?' sur '+c.app:'')+'. '+c.last):readText(c),()=>next(i+1))};
+    if(list.length>1)reply('Tu as '+list.length+' nouveaux messages.',()=>next(0));else next(0);
   }
   // ---- mémoire de l'assistant : prénom, choses à retenir, dates, habitudes (tout reste dans l'autoradio) ----
   const MEMK='polo-memo';
