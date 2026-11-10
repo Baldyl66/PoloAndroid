@@ -34,8 +34,15 @@ jobs:
         env:
           KS: ${{ secrets.POLO_KEYSTORE_B64 }}
         run: |
-          if [ -n "$KS" ]; then echo "$KS" | base64 -d > polo.keystore
-          else echo "::warning::Secret POLO_KEYSTORE_B64 absent, APK signés avec une clé temporaire"; fi
+          if [ -z "$KS" ]; then echo "::warning::Secret POLO_KEYSTORE_B64 absent, APK signés avec une clé temporaire"; exit 0; fi
+          # espaces / retours à la ligne ajoutés au copier-coller ignorés
+          CLEAN=$(printf '%s' "$KS" | tr -d '[:space:]')
+          echo "Secret : ${#CLEAN} caractères (attendu : environ 3440)"
+          if ! printf '%s' "$CLEAN" | base64 -d > polo.keystore 2>/dev/null || [ ! -s polo.keystore ]; then
+            rm -f polo.keystore
+            echo "::error::POLO_KEYSTORE_B64 n'est pas un base64 valide : recolle tout le contenu du fichier POLO_KEYSTORE_B64.txt"
+            exit 1
+          fi
 
       - name: Construire l'autoradio et le compagnon
         env:
