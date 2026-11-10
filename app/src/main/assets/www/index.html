@@ -995,7 +995,10 @@ async function loadWeather(force){
     const now=Date.now();let h0=d.hourly.time.findIndex(t=>new Date(t).getTime()>now-3600e3);if(h0<0)h0=0;
     // résumé gardé pour l'assistant vocal (pluie = codes bruine, pluie, averses, orage sur 6 h)
     window.__wx={t:Math.round(c.temperature_2m),label:wxLabel(c.weather_code,day),max:Math.round(dl.temperature_2m_max[0]),min:Math.round(dl.temperature_2m_min[0]),
-      rain:[0,1,2,3,4,5].some(i=>{const w=d.hourly.weather_code[h0+i];return (w>=51&&w<=67)||(w>=80&&w<=82)||w>=95})};
+      rain:[0,1,2,3,4,5].some(i=>{const w=d.hourly.weather_code[h0+i];return (w>=51&&w<=67)||(w>=80&&w<=82)||w>=95}),
+      // prévisions jour par jour (aujourd'hui + 4 jours) pour « quel temps demain / samedi »
+      days:(dl.time||[]).map((t,i)=>({date:t,label:wxLabel(dl.weather_code[i],true),max:Math.round(dl.temperature_2m_max[i]),min:Math.round(dl.temperature_2m_min[i]),
+        rain:dl.precipitation_probability_max?dl.precipitation_probability_max[i]:null}))};
     const H=[...Array(6)].map((_,i)=>({t:i?Math.round(d.hourly.temperature_2m[h0+i]):Math.round(c.temperature_2m),k:i?wxKind(d.hourly.weather_code[h0+i],!!d.hourly.is_day[h0+i]):k,h:i?new Date(d.hourly.time[h0+i]).getHours()+'h':'Maint.'}));
     $('meteo','#wxIcons').innerHTML=H.map(x=>`<div style="flex:1;display:flex;justify-content:center">${wxIc(x.k,28)}</div>`).join('');
     $('meteo','#wxTimes').innerHTML=H.map((x,i)=>`<div style="flex:1;text-align:center;font-size:14px;font-weight:${i?600:700};color:${i?'var(--c6B665E,#6B665E)':'var(--aC0603F,var(--aC0603F,#C0603F))'}">${x.h}</div>`).join('');
@@ -2442,8 +2445,24 @@ async function playMusic(raw){
     const N=window.PoloNative;if(!N||!N.setVolume){toast('Volume indisponible');return}
     const v=Math.max(0,Math.min(100,abs!=null?abs:(+N.getVolume('media')||0)+delta));N.setVolume('media',v);if(typeof syncVol==='function')syncVol(v);toast('Volume '+v+' %');
   }
-  function weather(rain){
+  // jour demandé dans la phrase : 0 = aujourd'hui, 1 = demain… (null = pas précisé)
+  const JOURS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  function dayOffset(n){
+    if(/apres demain/.test(n))return 2;if(/demain/.test(n))return 1;
+    if(/(ce )?(week end|weekend)/.test(n)){const d=new Date().getDay();return d===6||d===0?0:6-d}
+    const w=n.split(' ');for(let i=0;i<7;i++)if(w.includes(JOURS[i]))return (i-new Date().getDay()+7)%7;
+    if(/aujourd hui|ce soir|cet apres midi|ce matin/.test(n))return 0;return null;
+  }
+  function weather(rain,off){
     const w=window.__wx;if(!w){reply('Je n’ai pas encore la météo, il me faut internet.');if(typeof loadWeather==='function')loadWeather(true);return}
+    if(off){
+      const d=(w.days||[])[off];
+      if(!d)return reply('Je n’ai la météo que pour les quatre prochains jours.');
+      const name=off===1?'Demain':off===2?'Après-demain':cap(JOURS[new Date(d.date+'T12:00').getDay()]);
+      const pr=d.rain;
+      if(rain)return reply(pr==null?name+', '+String(d.label).toLowerCase()+'.':pr>=50?name+', oui, il risque de pleuvoir : '+pr+' % de risque.':pr>=20?name+', quelques averses possibles, '+pr+' % de risque.':name+', pas de pluie prévue.');
+      return reply(`${name}, ${String(d.label).toLowerCase()}, entre ${d.min} et ${d.max} degrés`+(pr!=null&&pr>=30?`, avec ${pr} % de risque de pluie.`:'.'));
+    }
     reply(rain?(w.rain?'Oui, de la pluie est prévue dans les prochaines heures.':'Non, pas de pluie prévue dans les prochaines heures.')
       :`Il fait ${w.t} degrés, ${String(w.label).toLowerCase()}. Entre ${w.min} et ${w.max} degrés aujourd’hui.`);
   }
@@ -2689,11 +2708,12 @@ async function playMusic(raw){
      const facts=Object.entries(o.facts).map(([k,v])=>k+' : '+v).concat(o.notes.slice(-8)).join(' ; ');
      let song='';try{if(media&&media.active&&media.title)song='Musique en cours : '+media.title+(media.artist?' de '+media.artist:'')+'.'}catch(e){}
      let route='';try{if(routeActive&&destName)route='Itinéraire en cours vers '+destName+'.'}catch(e){}
+     let wx='';try{const w=window.__wx;if(w)wx='Météo ici : '+w.t+' degrés, '+w.label+'. Prévisions : '+(w.days||[]).map((x,i)=>(i===0?'aujourd’hui':i===1?'demain':JOURS[new Date(x.date+'T12:00').getDay()])+' '+x.label+' '+x.min+' à '+x.max+' degrés'+(x.rain!=null?' pluie '+x.rain+' %':'')).join(' ; ')+'.'}catch(e){}
      return `Tu es Polo, l'assistant vocal intégré à l'autoradio de la Volkswagen Polo de ${myName()||'ton conducteur'}. `+
       `Tu parles français, tu tutoies, tu es chaleureux, vif et un peu drôle, comme un copain qui connaît bien la voiture. `+
       `Tes réponses sont lues à voix haute pendant que la personne conduit : une ou deux phrases courtes et naturelles, `+
       `sans liste, sans markdown, sans émoji, sans URL. Ne pose qu'une question à la fois. `+
-      `Nous sommes le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}, il est ${hh(d)}. ${route} ${song} `+
+      `Nous sommes le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}, il est ${hh(d)}. ${route} ${song} ${wx} `+
       (facts?`Ce que tu sais de lui : ${facts}. `:'')+
       `Pour agir sur la voiture, appelle la fonction « commande » avec UNE phrase simple de cette liste : `+
       `« emmène-moi à <adresse ou lieu> », « trouve <type de lieu> » (restaurant, station essence, McDonald's…), « arrête la navigation », « à quelle heure j'arrive », `+
@@ -2747,8 +2767,8 @@ async function playMusic(raw){
     const t=raw.trim(),n=norm(t);let m;
     if(memoryCmd(t,n)||phoneCmd(n))return;
     if(/^(quelle heure|il est quelle heure|l heure)/.test(n))return reply('Il est '+hh(new Date())+'.');
-    if(/(il va pleuvoir|de la pluie|parapluie)/.test(n))return weather(true);
-    if(/(quel temps|la meteo|il fait (combien|chaud|froid|beau)|temperature)/.test(n))return weather();
+    if(/(il va pleuvoir|va t il pleuvoir|de la pluie|parapluie|il pleut)/.test(n))return weather(true,dayOffset(n));
+    if(/(quel temps|la meteo|il (fait|fera|va faire) (combien|chaud|froid|beau)|temperature|il fera)/.test(n))return weather(false,dayOffset(n));
     if(/(a quelle heure (j arrive|on arrive|je serai)|quand (est ce que )?(j arrive|on arrive)|heure d arrivee|combien de temps)/.test(n))
       return reply(routeActive&&G.arrival?'Arrivée prévue à '+hh(G.arrival)+(destName?', à '+destName:'')+'.':'Aucun itinéraire en cours.');
     if(/(arrete|stop|annule|coupe) (la navigation|le guidage|l itineraire|le gps)/.test(n)){routeActive=false;renderGuidance();return reply('Guidage arrêté.')}

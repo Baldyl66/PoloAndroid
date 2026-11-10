@@ -16,11 +16,11 @@ import java.util.concurrent.Executors
  * Rien à installer sur l'autoradio. Les voix sont ajoutées aux ressources par GitHub Actions :
  *   assets/tts-fr/espeak-ng-data/   (prononciation)
  *   assets/tts-fr/femme/model.onnx + tokens.txt
- *   assets/tts-fr/homme/model.onnx + tokens.txt
+ *   assets/tts-fr/homme/model.onnx + tokens.txt (miro-high)
  */
 object NeuralTts {
     private const val ASSET_DIR = "tts-fr"
-    private const val VERSION = "piper-siwis-tom-fp32-1"
+    private const val VERSION = "piper-siwis-miro-1"
     val VOICES = listOf("femme", "homme")
 
     private val worker = Executors.newSingleThreadExecutor { Thread(it, "polo-tts").apply { priority = Thread.MAX_PRIORITY } }
