@@ -80,21 +80,19 @@ object NeuralTts {
                 }
                 android.util.Log.i("PoloTts", "voix $voice : ${frames * 1000 / sr} ms d'audio, 1re phrase en $first ms, tout en ${android.os.SystemClock.elapsedRealtime() - t0} ms")
                 if (myGen == generation) {
-                    // stop() en flux : joue tout ce qui reste dans le tampon, même s'il n'est pas plein
-                    try { t.stop() } catch (e: Exception) {}
-                    // attend que tout le son écrit soit vraiment joué
-                    val end = android.os.SystemClock.elapsedRealtime() + frames * 1000 / sr + 2000
+                    // attend la fin de la lecture SANS stop() : sur certains appareils la position
+                    // repasse à 0 dès stop(), et l'appli croyait à tort que rien n'avait été joué
+                    val end = android.os.SystemClock.elapsedRealtime() + frames * 1000 / sr + 1500
                     var maxHead = 0
                     while (myGen == generation && android.os.SystemClock.elapsedRealtime() < end) {
                         val h = t.playbackHeadPosition
                         if (h > maxHead) maxHead = h
-                        if (h >= frames) break
-                        // certaines versions remettent la position à 0 une fois tout joué
-                        if (maxHead > 0 && h == 0 && t.playState == AudioTrack.PLAYSTATE_STOPPED) break
-                        Thread.sleep(40)
+                        if (h >= frames - sr / 50) break
+                        Thread.sleep(30)
                     }
                     android.util.Log.i("PoloTts", "lecture : $maxHead / $frames images jouées")
-                    ok = myGen == generation && maxHead > 0
+                    try { t.stop() } catch (e: Exception) {}
+                    ok = myGen == generation
                 }
             } catch (e: Throwable) {
                 ok = false
