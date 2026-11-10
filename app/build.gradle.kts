@@ -15,11 +15,25 @@ android {
         versionName = "1.1"
     }
 
+    // Clé de signature fixe : sans elle, chaque construction GitHub signe différemment
+    // et Android refuse d'installer la mise à jour par-dessus l'ancienne version.
+    signingConfigs {
+        // fournie par GitHub (secrets POLO_KEYSTORE_B64 / POLO_KEYSTORE_PASSWORD), jamais dans le dépôt
+        val ks = rootProject.file("polo.keystore")
+        val pass = System.getenv("POLO_KEYSTORE_PASSWORD")
+        if (ks.exists() && !pass.isNullOrEmpty()) create("polo") {
+            storeFile = ks
+            storePassword = pass
+            keyAlias = "polo"
+            keyPassword = pass
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             // Signée avec la clé de debug pour pouvoir l'installer directement sur l'autoradio.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("polo") ?: signingConfigs.getByName("debug")
         }
     }
 

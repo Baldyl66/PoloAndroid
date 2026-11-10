@@ -30,7 +30,14 @@ jobs:
           rm -rf app/src/main/assets/vosk-fr
           mv vosk-model-small-fr-0.22 app/src/main/assets/vosk-fr
 
+      - name: Clé de signature (secret GitHub)
+        env:
+          KS: ${{ secrets.POLO_KEYSTORE_B64 }}
+        run: if [ -n "$KS" ]; then echo "$KS" | base64 -d > polo.keystore; else echo "::warning::Secret POLO_KEYSTORE_B64 absent : APK signés avec une clé temporaire"; fi
+
       - name: Construire l'autoradio et le compagnon
+        env:
+          POLO_KEYSTORE_PASSWORD: ${{ secrets.POLO_KEYSTORE_PASSWORD }}
         run: gradle :app:assembleRelease :compagnon:assembleRelease --no-daemon
 
       - name: Renommer les APK

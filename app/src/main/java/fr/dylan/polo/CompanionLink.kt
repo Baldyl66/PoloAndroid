@@ -108,17 +108,23 @@ object CompanionLink {
 
     @Suppress("DEPRECATION")
     private fun tryWifi(): Boolean {
+        // compagnon installé sur le même appareil (test sur un seul téléphone) : liaison locale
+        if (tryTcp(InetAddress.getLoopbackAddress(), 400, "wifi")) return true
         val wifi = app?.applicationContext?.getSystemService(Context.WIFI_SERVICE) as? WifiManager ?: return false
         val gw = try { wifi.dhcpInfo?.gateway ?: 0 } catch (e: Exception) { 0 }
         if (gw == 0) return false
         val ip = InetAddress.getByAddress(byteArrayOf(
             (gw and 0xff).toByte(), (gw shr 8 and 0xff).toByte(), (gw shr 16 and 0xff).toByte(), (gw shr 24 and 0xff).toByte()))
+        return tryTcp(ip, 2500, "wifi")
+    }
+
+    private fun tryTcp(ip: InetAddress, timeout: Int, via: String): Boolean {
         val s = Socket()
         return try {
-            s.connect(InetSocketAddress(ip, PORT), 2500)
+            s.connect(InetSocketAddress(ip, PORT), timeout)
             s.tcpNoDelay = true
             s.soTimeout = 45_000
-            session("wifi", s.getInputStream(), s.getOutputStream(), s)
+            session(via, s.getInputStream(), s.getOutputStream(), s)
         } catch (e: Exception) {
             try { s.close() } catch (x: Exception) {}
             false

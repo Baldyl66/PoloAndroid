@@ -6,3 +6,6 @@ local.properties
 .idea/
 compagnon/build/
 app/src/main/assets/vosk-fr/
+polo.keystore
+*.keystore
+*.jks
