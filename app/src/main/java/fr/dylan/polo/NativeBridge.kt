@@ -485,6 +485,12 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
             }
         } catch (e: Exception) {
         }
+        if (NeuralTts.available(act) && !neuralFailed) {
+            out.put("ready", true)
+            out.put("neural", JSONArray()
+                .put(JSONObject().put("id", "neural:femme").put("label", "Naturelle").put("g", "f"))
+                .put(JSONObject().put("id", "neural:homme").put("label", "Naturelle").put("g", "m")))
+        }
         return out.put("voices", arr).put("ja", ja).toString()
     }
 
@@ -496,10 +502,13 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
             .putFloat("ttsRate", rate.toFloat().coerceIn(0.4f, 2.5f))
             .putFloat("ttsPitch", pitch.toFloat().coerceIn(0.25f, 2.5f))
             .apply()
+        neuralVoice()?.let { NeuralTts.warmUp(act, it) }
         main.post { ensureTts(); if (ttsReady) applyTtsPrefs() }
     }
 
     private var pendingNav = false
+    /** La voix intégrée a échoué sur cet appareil : on reste sur le moteur d'Android. */
+    @Volatile private var neuralFailed = false
 
     private fun ttsFinished(id: String?) {
         main.post { audioCoord.abandonFocus() }
@@ -518,7 +527,31 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, if (nav) "nav" else "msg")
     }
 
+    /** Voix intégrée choisie ("femme"/"homme"), ou null pour le moteur vocal d'Android. */
+    private fun neuralVoice(): String? {
+        if (neuralFailed || !NeuralTts.available(act)) return null
+        val id = MainActivity.prefs(act).getString("ttsVoice", null)
+        return when {
+            id == null -> "femme"                       // par défaut : la voix naturelle intégrée
+            id.startsWith("neural:") -> id.removePrefix("neural:")
+            else -> null
+        }
+    }
+
     private fun speakAny(text: String, nav: Boolean) {
+        val nv = neuralVoice()
+        if (nv != null) {
+            main.post {
+                val mode = MainActivity.prefs(act).getString("guidanceMode", "pause") ?: "pause"
+                audioCoord.requestFocus(if (nav) mode else "pause", nav)
+                val usage = if (nav) AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE else AudioAttributes.USAGE_ASSISTANT
+                NeuralTts.speak(act, text, nv, MainActivity.prefs(act).getFloat("ttsRate", 1f), usage) { ok ->
+                    if (ok) ttsFinished(if (nav) "nav" else "msg")
+                    else main.post { neuralFailed = true; ensureTts(); if (ttsReady) speakNow(text, nav) else { pendingSpeech = text; pendingNav = nav } }
+                }
+            }
+            return
+        }
         main.post {
             ensureTts()
             if (ttsReady) speakNow(text, nav) else {
@@ -569,6 +602,7 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     @JavascriptInterface
     fun stopSpeaking() {
+        NeuralTts.stop()
         main.post { tts?.stop() }
     }
 

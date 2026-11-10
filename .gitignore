@@ -9,3 +9,5 @@ app/src/main/assets/vosk-fr/
 polo.keystore
 *.keystore
 *.jks
+app/libs/
+app/src/main/assets/tts-fr/

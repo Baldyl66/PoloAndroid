@@ -2329,7 +2329,9 @@ boot();
       // seulement les vraies voix installées (3 au plus), sans changer leur ton
       return list.slice(0,3).map((x,i)=>({id:g+(i+1),g,n:'Voix '+(i+1),v:x.id,p:1}));
     };
-    const out=pick(fr.filter(x=>!isM(x)),'f').concat(pick(fr.filter(isM),'m'));
+    // voix naturelles intégrées à l'appli (hors ligne) : en tête, et par défaut
+    const nat=((v&&v.neural)||[]).map(x=>({id:'n'+x.g,g:x.g,n:x.label,v:x.id,p:1}));
+    const out=nat.filter(x=>x.g==='f').concat(pick(fr.filter(x=>!isM(x)),'f'),nat.filter(x=>x.g==='m'),pick(fr.filter(isM),'m'));
     // japonais : une voix féminine et une masculine (elles liront le français avec leur accent)
     const ja=(v&&v.ja)||[],jM=x=>/x-(jac|jad)-/.test(x.id),jf=ja.find(x=>!jM(x)),jm=ja.find(jM);
     if(jf)out.push({id:'jf',g:'j',n:'Féminine',v:jf.id,p:1});
@@ -2341,6 +2343,8 @@ boot();
   function applyStyle(){
     const N=window.PoloNative;if(!N||!N.setTtsStyle)return;
     let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){}if(!v.ready)return;
+    // une seule fois : passer à la voix naturelle intégrée, même si une autre voix avait été choisie
+    if(v.neural&&v.neural.length){try{if(!localStorage.getItem('polo-tts-nat')){localStorage.setItem('polo-tts-nat','1');localStorage.removeItem('polo-tts-voice')}}catch(e){}}
     const ns=nuances(v),nu=ns.find(x=>x.id===ld('polo-tts-voice',''))||ns[0];
     N.setTtsStyle(nu.v,1,nu.p||1);
   }

@@ -13,6 +13,8 @@ android {
         targetSdk = 34
         versionCode = 2
         versionName = "1.1"
+        // autoradios et téléphones ARM uniquement : APK bien plus léger
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     // Clé de signature fixe : sans elle, chaque construction GitHub signe différemment
@@ -55,4 +57,6 @@ dependencies {
     // reconnaissance vocale hors ligne pour le réveil « Polo »
     implementation("com.alphacephei:vosk-android:0.3.47@aar")
     implementation("net.java.dev.jna:jna:5.13.0@aar")
+    // voix naturelles hors ligne (Piper via sherpa-onnx) ; la bibliothèque est téléchargée par GitHub Actions
+    implementation(files("libs/sherpa-onnx-1.13.8.aar"))
 }
