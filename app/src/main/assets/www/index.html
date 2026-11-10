@@ -131,6 +131,7 @@ body{background:var(--bg);overflow:hidden;font-family:system-ui,-apple-system,"S
         <button class="dbtn" data-key="tel"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span id="telLabel">Téléphone</span></button>
         <button class="dbtn" data-key="contacts"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>Contacts</span></button>
         <button class="dbtn" data-key="messages"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span>Notifications</span></button>
+        <button class="dbtn" data-key="assistant" style="color:var(--aE8A87C,#E8A87C)"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Assistant</span></button>
                 <button class="dbtn" data-key="meteo"><svg viewBox="0 0 24 24"><path d="M8 2.5v1.5M2.5 8H4M4.1 4.1l1 1M11.9 4.1l-1 1"/><path d="M5 11a3.5 3.5 0 0 1 6.2-4.2"/><path d="M9.5 20h7.5a3.5 3.5 0 0 0 .4-6.98A5 5 0 0 0 8 13a3.5 3.5 0 0 0 1.5 7z"/></svg><span>Météo</span></button>
         <button class="dbtn" data-key="reglages"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Réglages</span></button>
       </div>
@@ -963,6 +964,9 @@ async function loadWeather(force){
     const uv=dl.uv_index_max[0]||0;chip('uv',uvLabel(uv),'Indice '+Math.round(uv));
     // heure par heure : 6 prochaines heures
     const now=Date.now();let h0=d.hourly.time.findIndex(t=>new Date(t).getTime()>now-3600e3);if(h0<0)h0=0;
+    // résumé gardé pour l'assistant vocal (pluie = codes bruine, pluie, averses, orage sur 6 h)
+    window.__wx={t:Math.round(c.temperature_2m),label:wxLabel(c.weather_code,day),max:Math.round(dl.temperature_2m_max[0]),min:Math.round(dl.temperature_2m_min[0]),
+      rain:[0,1,2,3,4,5].some(i=>{const w=d.hourly.weather_code[h0+i];return (w>=51&&w<=67)||(w>=80&&w<=82)||w>=95})};
     const H=[...Array(6)].map((_,i)=>({t:i?Math.round(d.hourly.temperature_2m[h0+i]):Math.round(c.temperature_2m),k:i?wxKind(d.hourly.weather_code[h0+i],!!d.hourly.is_day[h0+i]):k,h:i?new Date(d.hourly.time[h0+i]).getHours()+'h':'Maint.'}));
     $('meteo','#wxIcons').innerHTML=H.map(x=>`<div style="flex:1;display:flex;justify-content:center">${wxIc(x.k,28)}</div>`).join('');
     $('meteo','#wxTimes').innerHTML=H.map((x,i)=>`<div style="flex:1;text-align:center;font-size:14px;font-weight:${i?600:700};color:${i?'var(--c6B665E,#6B665E)':'var(--aC0603F,var(--aC0603F,#C0603F))'}">${x.h}</div>`).join('');
@@ -1605,6 +1609,7 @@ document.querySelectorAll('.dbtn').forEach(k=>k.addEventListener('click',()=>{
   if(current==='appel-entrant'&&a!=='back'){toast('Répondez ou refusez l’appel');return}
   if(a==='home')home();else if(a==='back')back();else if(a==='nav')openNav();
   else if(a==='tel'){if(callStart)go('appel');else openKeypad(false)}
+  else if(a==='assistant'){if(window.__assistant)window.__assistant()}
   else go(a);
 }));
 document.querySelector('[data-demo="call"]').onclick=incoming;
@@ -2261,10 +2266,15 @@ boot();
   const persona=()=>VOICE;
   // voix naturelles installées, rangées en féminines et masculines (les voix Google se reconnaissent à leur nom)
   function nuances(v){
-    const fr=(v&&v.voices)||[],isM=x=>/x-(frb|frd|cab|cad)-/.test(x.id),M=fr.filter(isM),F=fr.filter(x=>!isM(x));
-    const lab=(x,i)=>'Voix '+(i+1)+(x.label.split('·')[1]?' ·'+x.label.split('·')[1]:'');
-    const out=F.map((x,i)=>({id:x.id,g:'f',n:lab(x,i),v:x.id})).concat(M.map((x,i)=>({id:x.id,g:'m',n:lab(x,i),v:x.id})));
-    return out.length?out:[{id:'',g:'f',n:'Par défaut',v:''}];
+    const fr=((v&&v.voices)||[]).filter(x=>!x.label.includes('·')),isM=x=>/x-(frb|frd)-/.test(x.id);   // France uniquement
+    const pick=(list,g)=>{
+      const out=list.slice(0,3).map(x=>({v:x.id,p:1}));
+      // moins de 3 voix installées : on complète avec un autre ton d'une voix existante
+      const tones=[.92,1.08];for(let k=0;out.length<3&&list.length;k++)out.push({v:list[k%list.length].id,p:tones[k%2]});
+      return out.map((x,i)=>({id:g+(i+1),g,n:'Voix '+(i+1),v:x.v,p:x.p}));
+    };
+    const out=pick(fr.filter(x=>!isM(x)),'f').concat(pick(fr.filter(isM),'m'));
+    return out.length?out:[{id:'',g:'f',n:'Par défaut',v:'',p:1}];
   }
   window.__nuances=nuances;
   // applique la voix choisie : vaut pour les messages, l'assistant et le GPS
@@ -2272,7 +2282,7 @@ boot();
     const N=window.PoloNative;if(!N||!N.setTtsStyle)return;
     let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){}if(!v.ready)return;
     const ns=nuances(v),nu=ns.find(x=>x.id===ld('polo-tts-voice',''))||ns[0];
-    N.setTtsStyle(nu.v,1,1);
+    N.setTtsStyle(nu.v,1,nu.p||1);
   }
   window.__persona=persona;window.__applyStyle=applyStyle;
   const endDot=s=>s.trim().replace(/[.!?…]*$/,m=>m||'.');
@@ -2317,6 +2327,68 @@ boot();
       }));
     },800);
   }
+
+  // ---- assistant vocal : commandes de la voiture, hors ligne ----
+  const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’'-]/g,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  const hh=d=>d.getHours()+' heures'+(d.getMinutes()?' '+String(d.getMinutes()).padStart(2,'0'):'');
+  const reply=(t,cb)=>say('Assistant',t,cb);
+  function goTo(dest){
+    const d=norm(dest),place=/^(la )?maison$|^chez moi$/.test(d)?'Maison':/^(le |au )?(travail|boulot|bureau)$/.test(d)?'Travail':null;
+    if(place){const p=savedPlace(place),lbl=place==='Maison'?'la maison':'le travail';
+      if(p){reply('C’est parti pour '+lbl+'.');startRoute(place,null,false,p.ll)}
+      else{reply('L’adresse pour '+lbl+' n’est pas encore enregistrée.');pickPlace(place,'route')}return}
+    reply('Je cherche '+dest+'.');if(current!=='recherche')go('recherche');query=dest;renderSearch();
+  }
+  function callName(who){
+    let cts=[];try{cts=JSON.parse(NATIVE.contacts())}catch(e){}
+    const w=norm(who),c=cts.find(x=>norm(x.name)===w)||cts.find(x=>norm(x.name).startsWith(w))||cts.find(x=>norm(x.name).split(' ').includes(w));
+    if(!c){reply('Je ne trouve pas '+who+' dans tes contacts.');return}
+    reply('J’appelle '+c.name+'.',()=>dial(c.name,c.number));
+  }
+  function volume(delta,abs){
+    const N=window.PoloNative;if(!N||!N.setVolume){toast('Volume indisponible');return}
+    const v=Math.max(0,Math.min(100,abs!=null?abs:(+N.getVolume('media')||0)+delta));N.setVolume('media',v);if(typeof syncVol==='function')syncVol(v);toast('Volume '+v+' %');
+  }
+  function weather(rain){
+    const w=window.__wx;if(!w){reply('Je n’ai pas encore la météo, il me faut internet.');if(typeof loadWeather==='function')loadWeather(true);return}
+    reply(rain?(w.rain?'Oui, de la pluie est prévue dans les prochaines heures.':'Non, pas de pluie prévue dans les prochaines heures.')
+      :`Il fait ${w.t} degrés, ${String(w.label).toLowerCase()}. Entre ${w.min} et ${w.max} degrés aujourd’hui.`);
+  }
+  function readUnread(){
+    let a=[];try{a=JSON.parse(NATIVE.phoneNotifs())}catch(e){}
+    const list=a.map(toConv).filter(c=>c.isMsg&&UNREAD.has(c.number)).slice(0,3);
+    if(!list.length){reply('Aucun nouveau message.');return}
+    const next=i=>{if(i>=list.length)return;const c=list[i];if(window.__notifRead)window.__notifRead(c.number);say(c.app,readText(c),()=>next(i+1))};
+    reply(list.length>1?list.length+' nouveaux messages.':'Un nouveau message.',()=>next(0));
+  }
+  const SCREENS={meteo:'meteo',musique:'musique',notifications:'messages',messages:'messages',reglages:'reglages',parametres:'reglages',contacts:'contacts',telephone:'clavier',clavier:'clavier'};
+  function handle(raw){
+    const t=raw.trim(),n=norm(t);let m;
+    if(/^(quelle heure|il est quelle heure|l heure)/.test(n))return reply('Il est '+hh(new Date())+'.');
+    if(/(il va pleuvoir|de la pluie|parapluie)/.test(n))return weather(true);
+    if(/(quel temps|la meteo|il fait (combien|chaud|froid|beau)|temperature)/.test(n))return weather();
+    if(/(a quelle heure (j arrive|on arrive|je serai)|quand (est ce que )?(j arrive|on arrive)|heure d arrivee|combien de temps)/.test(n))
+      return reply(routeActive&&G.arrival?'Arrivée prévue à '+hh(G.arrival)+(destName?', à '+destName:'')+'.':'Aucun itinéraire en cours.');
+    if(/(arrete|stop|annule|coupe) (la navigation|le guidage|l itineraire|le gps)/.test(n)){routeActive=false;renderGuidance();return reply('Guidage arrêté.')}
+    if((m=t.match(/^(?:emm[eè]ne[- ]moi|am[eè]ne[- ]moi|conduis[- ]moi|guide[- ]moi|va|aller|allons|direction|itin[ée]raire|on va|je vais|je veux aller|route)\s+(?:à |a |au |aux |vers |chez |jusqu['’]à |pour )?(.+)$/i)))return goTo(m[1]);
+    if((m=t.match(/^(?:trouve|cherche|recherche|o[uù] est)\s+(?:moi\s+)?(.+)$/i)))return goTo(m[1]);
+    if((m=t.match(/^(?:appelle|appeler|t[ée]l[ée]phone [aà]|t[ée]l[ée]phoner [aà])\s+(.+)$/i)))return callName(m[1]);
+    if(/(lis|lire|lit|ecouter) (mes |les )?(nouveaux )?messages|(j ai|ai je|est ce que j ai) (des |un )?(nouveaux? )?messages?/.test(n))return readUnread();
+    if(/^(pause|stop)$|(arrete|coupe|stoppe) (la musique|le son)/.test(n)){if(playing)togglePlay();return toast('Pause')}
+    if(/(mets|lance|joue|remets|reprends?) (de |la )?(la )?musique|^(lecture|play|reprendre|reprends)$/.test(n)){if(!playing)togglePlay();return toast('Lecture')}
+    if(/(suivant|chanson suivante|morceau suivant|passe (a la suivante|la chanson|le morceau)|^passe$)/.test(n)){skip(1);return}
+    if(/(precedent|chanson precedente|morceau precedent|reviens)/.test(n)){skip(-1);return}
+    if((m=n.match(/volume (a |au )?(\d{1,3})/)))return volume(0,+m[2]);
+    if(/(monte|augmente|plus fort|hausse)/.test(n))return volume(15);
+    if(/(baisse|diminue|moins fort)/.test(n))return volume(-15);
+    if((m=n.match(/^(ouvre|affiche|montre|va sur|va dans)( la| les| le| l)? (\w+)/))&&SCREENS[m[3]]){go(SCREENS[m[3]]);return}
+    if(/(que sais tu faire|qu est ce que tu sais faire|aide moi|^aide$)/.test(n))
+      return reply('Tu peux me dire par exemple : emmène-moi à la maison, trouve une station essence, quel temps fait-il, appelle Paul, lis mes messages, mets la musique, ou monte le son.');
+    reply('Je n’ai pas compris. Dis par exemple : emmène-moi à la maison, ou quel temps fait-il.');
+  }
+  window.__assistant=()=>{if(voiceOpen)return;listen('Assistant',handle)};
+  window.__assistantHandle=handle;
+
   function loadMsgs(){
     let a=[],lk={};try{a=JSON.parse(N.phoneNotifs())}catch(e){}try{lk=JSON.parse(N.phoneLink())}catch(e){}
     window.__phoneLinked=lk.state==='wifi'||lk.state==='bt';
@@ -2354,7 +2426,7 @@ boot();
     const chip=(lab,on,attr)=>`<button ${attr} style="border:0;cursor:pointer;font:600 15px system-ui,sans-serif;padding:9px 16px;border-radius:18px;${on?'background:var(--aC0603F,#C0603F);color:#fff;box-shadow:0 4px 12px rgba(var(--rgbacc,192,96,63),.35)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">${lab}</button>`;
     const ns=window.__nuances(v),curN=(ns.find(x=>x.id===base)||ns[0]).id;
     const line=(g,lab)=>{const l=ns.filter(x=>x.g===g);return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px"><span style="width:118px;flex:none;font-size:15px;font-weight:700">${lab}</span>${l.length?l.map(x=>chip(x.n,x.id===curN,`data-tv="${x.id.replace(/"/g,'&quot;')}"`)).join(''):'<small class="m" style="font-size:14px">Aucune voix installée sur l’autoradio</small>'}</div>`};
-    ui.querySelector('[data-ttsbox]').innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':line('f','👩 Féminines')+line('m','👨 Masculines');
+    ui.querySelector('[data-ttsbox]').innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':line('f','Féminines')+line('m','Masculines');
     ui.querySelectorAll('[data-tv]').forEach(b=>b.onclick=()=>{lset('polo-tts-voice',b.dataset.tv);window.__applyStyle();speakOut('Assistant',window.__persona().demo);ui.dataset.sig='';fillTts(ui)});
   }
   function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsui]').forEach(u=>{if(u.getClientRects().length)fillTts(u)})})}
