@@ -33,7 +33,9 @@ jobs:
       - name: Clé de signature (secret GitHub)
         env:
           KS: ${{ secrets.POLO_KEYSTORE_B64 }}
-        run: if [ -n "$KS" ]; then echo "$KS" | base64 -d > polo.keystore; else echo "::warning::Secret POLO_KEYSTORE_B64 absent : APK signés avec une clé temporaire"; fi
+        run: |
+          if [ -n "$KS" ]; then echo "$KS" | base64 -d > polo.keystore
+          else echo "::warning::Secret POLO_KEYSTORE_B64 absent, APK signés avec une clé temporaire"; fi
 
       - name: Construire l'autoradio et le compagnon
         env:
