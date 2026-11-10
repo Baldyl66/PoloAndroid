@@ -38,8 +38,8 @@ jobs:
           rm -rf $D && mkdir -p $D/femme $D/homme
           for pair in femme:siwis homme:tom; do
             g=${pair%%:*}; n=${pair##*:}
-            curl -fsSL https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-fr_FR-$n-medium-int8.tar.bz2 | tar xj
-            m=vits-piper-fr_FR-$n-medium-int8
+            curl -fsSL https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-fr_FR-$n-medium.tar.bz2 | tar xj
+            m=vits-piper-fr_FR-$n-medium
             mv $m/*.onnx $D/$g/model.onnx
             mv $m/tokens.txt $D/$g/tokens.txt
             [ -d $D/espeak-ng-data ] || mv $m/espeak-ng-data $D/espeak-ng-data
