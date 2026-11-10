@@ -78,6 +78,10 @@ object CompanionLink {
         return JSONArray(list).toString()
     }
 
+    /** Dernières infos du téléphone : anniversaires, agenda, réveil, batterie ("{}" si pas encore reçues). */
+    @Volatile private var info = "{}"
+    fun infoJson(): String = info
+
     /** Répond à un message par le téléphone. Renvoie "ok" ou "offline". */
     fun reply(key: String, text: String): String =
         if (send(JSONObject().put("t", "reply").put("key", key).put("text", text).put("id", System.currentTimeMillis().toString()))) "ok" else "offline"
@@ -185,6 +189,10 @@ object CompanionLink {
                         val k = m.optString("key")
                         synchronized(items) { items.remove(k) }
                         emitNotif(JSONObject().put("type", "removed").put("key", k))
+                    }
+                    "info" -> {
+                        info = (m.optJSONObject("info") ?: JSONObject()).toString()
+                        emit?.invoke("phoneinfo", info)
                     }
                     "result" -> emitNotif(JSONObject().put("type", "result").put("ok", m.optBoolean("ok")))
                 }

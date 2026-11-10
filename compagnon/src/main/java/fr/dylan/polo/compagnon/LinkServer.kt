@@ -70,6 +70,11 @@ object LinkServer {
         sessions.forEach { it.send(msg) }
     }
 
+    // anniversaires, agenda, réveil et batterie : envoyés à la connexion puis toutes les 10 minutes
+    private var infoTimer: java.util.concurrent.ScheduledExecutorService? = null
+    private fun infoMsg(): JSONObject? = app?.let { JSONObject().put("t", "info").put("info", PhoneInfo.collect(it)) }
+    fun sendInfo() { val m = infoMsg() ?: return; sessions.forEach { it.send(m) } }
+
     @Synchronized
     fun start(ctx: Context) {
         app = ctx.applicationContext
@@ -77,10 +82,14 @@ object LinkServer {
         NotifStore.addListener(forward)
         if (tcp == null) Thread({ runTcp() }, "polo-wifi").start()
         startBluetooth(ctx)
+        if (infoTimer == null) infoTimer = Executors.newSingleThreadScheduledExecutor().also {
+            it.scheduleWithFixedDelay({ try { sendInfo() } catch (e: Exception) {} }, 10, 10, java.util.concurrent.TimeUnit.MINUTES)
+        }
     }
 
     @Synchronized
     fun stop() {
+        infoTimer?.shutdownNow(); infoTimer = null
         NotifStore.removeListener(forward)
         quietly(tcp); tcp = null
         quietly(bt); bt = null
@@ -173,6 +182,7 @@ object LinkServer {
                 refreshStatus()
                 write(JSONObject().put("t", "welcome").put("phone", Build.MANUFACTURER.replaceFirstChar { it.uppercase() } + " " + Build.MODEL))
                 write(JSONObject().put("t", "all").put("items", NotifStore.allJson()))
+                infoMsg()?.let { write(it) }
                 while (true) {
                     val line = reader.readLine() ?: break
                     val m = try { JSONObject(line) } catch (e: Exception) { continue }

@@ -101,6 +101,7 @@ class MainActivity : Activity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         LinkServer.startBluetooth(this)
+        if (requestCode == 8) Thread { try { LinkServer.sendInfo() } catch (e: Exception) {} }.start()
         refreshStatus()
     }
 
@@ -185,6 +186,13 @@ class MainActivity : Activity() {
             if (has) "Enregistré · ••••" + code.takeLast(2) else "Affiché sur l'autoradio : Réglages → Bluetooth",
             has && !editingCode, if (has && !editingCode) "Modifier" to { editingCode = true; buildSteps() } else null))
         if (!has || editingCode) steps.addView(codeEntry())
+        divider()
+        val infoOk = PhoneInfo.has(this, Manifest.permission.READ_CONTACTS) && PhoneInfo.has(this, Manifest.permission.READ_CALENDAR)
+        steps.addView(step(4, "Contacts et agenda",
+            if (infoOk) "Autorisé · anniversaires et rendez-vous envoyés à l'autoradio" else "Pour que l'assistant connaisse les anniversaires et ton agenda",
+            infoOk, if (infoOk) null else "Autoriser" to {
+                requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALENDAR), 8)
+            }))
     }
 
     private fun divider() = steps.addView(View(this).apply {
