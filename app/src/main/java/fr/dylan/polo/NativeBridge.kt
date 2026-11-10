@@ -306,6 +306,15 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
                 return@post
             }
             WakeWord.pause()   // libère le micro pour la dictée
+            listenRetry = 0
+            // petit délai : le micro doit être vraiment rendu par l'écoute du mot « Polo »
+            main.postDelayed({ startRecognizer() }, 350)
+        }
+    }
+
+    private var listenRetry = 0
+
+    private fun startRecognizer() {
             recognizer?.destroy()
             val r = SpeechRecognizer.createSpeechRecognizer(act)
             recognizer = r
@@ -316,6 +325,13 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {}
                 override fun onError(error: Int) {
+                    // micro encore occupé : on réessaie une fois au lieu de répondre « pas compris »
+                    if (listenRetry < 1 && (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
+                                error == SpeechRecognizer.ERROR_AUDIO || error == SpeechRecognizer.ERROR_CLIENT)) {
+                        listenRetry++
+                        main.postDelayed({ startRecognizer() }, 600)
+                        return
+                    }
                     val code = when (error) {
                         SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "nomatch"
                         SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network"
@@ -341,8 +357,10 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
                 .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                // laisse finir la phrase : on coupait trop tôt
+                .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
             r.startListening(intent)
-        }
     }
 
     @JavascriptInterface
@@ -358,7 +376,10 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     private fun ensureTts() {
         if (tts != null) return
-        tts = TextToSpeech(act) { status ->
+        // moteur Google en priorité (voix naturelles) ; sinon le moteur par défaut de l'appareil
+        val google = "com.google.android.tts"
+        val hasGoogle = try { act.packageManager.getPackageInfo(google, 0); true } catch (e: Exception) { false }
+        val init = TextToSpeech.OnInitListener { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) {
                 tts?.language = Locale.FRANCE
@@ -375,7 +396,17 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
             }
             pendingSpeech = null
         }
+        tts = if (hasGoogle) TextToSpeech(act, init, google) else TextToSpeech(act, init)
     }
+
+    /** Meilleure voix française installée : qualité la plus haute, hors ligne, France d'abord. */
+    private fun bestFrenchVoice(): android.speech.tts.Voice? = try {
+        tts?.voices?.filter { it.locale.language == "fr" && !it.isNetworkConnectionRequired &&
+                !it.features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) }
+            ?.sortedWith(compareByDescending<android.speech.tts.Voice> { it.quality }
+                .thenBy { it.locale.country != "FR" }.thenBy { it.latency })
+            ?.firstOrNull()
+    } catch (e: Exception) { null }
 
     /** Applique le timbre choisi (voix, vitesse, hauteur) : vaut pour les messages et pour le GPS. */
     private fun applyTtsPrefs() {
@@ -383,7 +414,8 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         val id = p.getString("ttsVoice", null)
         try {
             val v = if (id != null) tts?.voices?.firstOrNull { it.name == id } else null
-            if (v != null) tts?.voice = v else tts?.language = Locale.FRANCE
+            val best = v ?: bestFrenchVoice()
+            if (best != null) tts?.voice = best else tts?.language = Locale.FRANCE
         } catch (e: Exception) {
         }
         tts?.setSpeechRate(p.getFloat("ttsRate", 1f))

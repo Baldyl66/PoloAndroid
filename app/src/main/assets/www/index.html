@@ -1328,9 +1328,9 @@ tap($('recherche','#qmic'),dictateDest);
   {const l=textEl('musique','À suivre');if(l){l.style.textAlign='center';l.style.fontWeight='600';l.textContent='Sources'}}
   {const rows=$$('musique','div[style*="height: 60px"]');const list=rows[0].parentElement;
    list.closest('div[style*="flex-direction: column"][style*="gap: 26px"]')?.style.setProperty('gap','20px');
-   const covers=[['#2BD46A','#14833D'],['#FF3B55','#B3001F'],['#B05CFF','#6B17C7'],['var(--aE8A87C,var(--aE8A87C,#E8A87C))','var(--aC0603F,var(--aC0603F,#C0603F))']];
+   const covers=[['#2BD46A','#14833D'],['#FF3B55','#B3001F']];
    const st=document.createElement('style');st.textContent=`
-    .qgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .qgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
     .qt{position:relative;aspect-ratio:1;border-radius:16px;overflow:hidden;border:0;padding:0;cursor:pointer;text-align:left;box-shadow:0 4px 14px rgba(43,42,40,.12);transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s}
     .qt:hover:not(*){transform:translateY(-3px);box-shadow:0 10px 22px rgba(43,42,40,.18)}
     .qt svg.art{position:absolute;inset:0;width:100%;height:100%}
@@ -1342,10 +1342,10 @@ tap($('recherche','#qmic'),dictateDest);
     .qt .pl svg{width:12px;height:12px;fill:currentColor}`;
    R.musique.appendChild(st);
    const g=document.createElement('div');g.className='qgrid';
-   g.innerHTML=covers.map(([a,b],i)=>`<button class="qt" style="background:linear-gradient(135deg,${a},${b})" aria-label="Ouvrir ${['Spotify','YouTube Music','Deezer','Musique'][i]}">
+   g.innerHTML=covers.map(([a,b],i)=>`<button class="qt" style="background:linear-gradient(135deg,${a},${b})" aria-label="Ouvrir ${['Spotify','YouTube Music'][i]}">
      <svg class="art" viewBox="0 0 100 100"><circle cx="50" cy="40" r="22" style="fill:rgba(255,255,255,.18)"></circle><path d="M45 52V28l16-4v22" style="fill:none;stroke:#fff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round"></path><circle cx="40" cy="52" r="6" style="fill:#fff"></circle><circle cx="56" cy="46" r="6" style="fill:#fff"></circle></svg>
      <span class="pl"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg></span>
-     <span class="cap"><b>${['Spotify','YouTube Music','Deezer','Musique'][i]}</b><small>Ouvrir</small></span></button>`).join('');
+     <span class="cap"><b>${['Spotify','YouTube Music'][i]}</b><small>Ouvrir</small></span></button>`).join('');
    list.replaceWith(g);
 
   }
@@ -1695,7 +1695,7 @@ if(NATIVE){
     media=d||media;
     if(!media.active&&window.__spNow&&window.__spNow())return;
     const t=!media.access?'Autoriser l’accès musique':!media.active?'Aucune musique en cours':(media.title||'Titre inconnu');
-    const a=!media.access?'Touchez pour ouvrir le réglage':!media.active?'Lancez Spotify, Deezer, YouTube Music…':(media.artist||media.appName||'');
+    const a=!media.access?'Touchez pour ouvrir le réglage':!media.active?'Lancez Spotify ou YouTube Music':(media.artist||media.appName||'');
     TITLE_ELS.forEach(e=>e.textContent=t);ARTIST_ELS.forEach(e=>e.textContent=a);
     if(media.active){
       if(media.duration>0)dur=media.duration/1000;pos=Math.min(dur,(media.position||0)/1000);
@@ -1723,7 +1723,7 @@ if(NATIVE){
   TITLE_ELS.forEach(e=>e.addEventListener('click',ev=>{if(!media.access){ev.stopPropagation();NATIVE.openMediaAccess()}}));
   // « À suivre » devient « Sources » : ouvrir les applis de musique installées
   {
-   const APPS=[['Spotify','com.spotify.music'],['YouTube Music','com.google.android.apps.youtube.music'],['Deezer','deezer.android.app'],['Musique','com.android.music']];
+   const APPS=[['Spotify','com.spotify.music'],['YouTube Music','com.google.android.apps.youtube.music']];
    $$('musique','.qt').forEach((q,i)=>{const [name,pkg]=APPS[i];const ok=NATIVE.isInstalled(pkg);
      q.querySelector('.cap b').textContent=name;q.querySelector('.cap small').textContent=ok?'Ouvrir':'Non installée';q.style.opacity=ok?1:.45;
      const c=q.cloneNode(true);q.replaceWith(c);c.addEventListener('click',()=>{if(!NATIVE.openApp(pkg))c.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'none'}],{duration:200})})})}

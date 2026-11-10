@@ -62,7 +62,8 @@ object WakeWord {
     /** Libère le micro (pendant une dictée, un appel…). */
     fun pause() {
         paused = true
-        main.post { close() }
+        // tout de suite si possible : la dictée démarre juste après et a besoin du micro libre
+        if (Looper.myLooper() == Looper.getMainLooper()) close() else main.post { close() }
     }
 
     /** Reprend l'écoute du mot « Polo ». */
