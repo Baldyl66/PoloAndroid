@@ -772,7 +772,12 @@ rmInit();
 
 /* ================= GUIDAGE VOCAL ================= */
 let navVoiceOn=load('polo-navvoice')!=='0';
-function sayNav(t){if(!navVoiceOn||!t)return;
+// l'assistant tutoie : les consignes affichées restent telles quelles, seule la voix passe au « tu »
+const TU=[[/\bvous êtes\b/gi,'tu es'],[/\bvous arrivez\b/gi,'tu arrives'],[/\binsérez-vous\b/gi,'insère-toi'],[/\btournez\b/gi,'tourne'],[/\bprenez\b/gi,'prends'],
+  [/\bgardez\b/gi,'garde'],[/\bfaites\b/gi,'fais'],[/\bcontinuez\b/gi,'continue'],[/\bserrez\b/gi,'serre'],[/\brestez\b/gi,'reste'],[/\bsortez\b/gi,'sors'],
+  [/\bquittez\b/gi,'quitte'],[/\bsuivez\b/gi,'suis'],[/\bentrez\b/gi,'entre'],[/\brejoignez\b/gi,'rejoins']];
+function tutoie(t){TU.forEach(([re,v])=>{t=t.replace(re,m=>m[0]===m[0].toUpperCase()?v[0].toUpperCase()+v.slice(1):v)});return t}
+function sayNav(t){if(!navVoiceOn||!t)return;t=tutoie(t);
   if(window.PoloNative&&PoloNative.speakNav){PoloNative.speakNav(t);return}
   try{if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';speechSynthesis.cancel();speechSynthesis.speak(u)}}catch(e){}}
 const sayDist=m=>m>=950?(Math.round(m/100)/10).toString().replace('.',',').replace(/,0$/,'')+' kilomètre'+(m>=1950?'s':''):(m>=200?Math.round(m/50)*50:Math.max(10,Math.round(m/10)*10))+' mètres';
@@ -792,7 +797,7 @@ function navVoiceTick(m,dist,speedMs){
 function navVoiceStart(name,meters,arrival){if(!meters)return;const d=sayDist(meters).replace(/^(\d+),?/,'$&'),h=hhmm(arrival).replace(':',' heures ');
   const P=window.__persona&&window.__persona();sayNav(P&&P.go?P.go(name,d,h):'Itinéraire calculé vers '+name+'. '+d+', arrivée prévue à '+h)}
 // départ et arrivée à la façon du personnage choisi ; les consignes de virage restent normales
-function navArrivedText(){const P=window.__persona&&window.__persona();return P&&P.end?P.end:'Vous êtes arrivé à destination'}
+function navArrivedText(){const P=window.__persona&&window.__persona();return P&&P.end?P.end:'Tu es arrivé à destination.'}
 function navVoiceArrived(){sayNav(navArrivedText())}
 function setNavVoice(on){navVoiceOn=on;save('polo-navvoice',on?'1':'0');navRoot.querySelector('.vbtn').classList.toggle('off',!on);
   const sw=$$('reglages','.sw').find(x=>x.getAttribute('aria-label')==='Guidage vocal');if(sw){sw.classList.toggle('on',on);sw.setAttribute('aria-checked',on)}
@@ -832,7 +837,7 @@ function voiceOpenUI(label,ph){closeVoice(true);voiceOpen=true;voiceEl.classList
 function voiceFail(msg){vLabel.textContent='Assistant';vText.innerHTML=`<span class="ph">${msg}</span>`;rmsLevel=0;vTimers.push(setTimeout(()=>closeVoice(true),2200))}
 /* Écoute une phrase et renvoie le texte reconnu */
 function listen(label,onResult){
-  voiceKind='listen';rmsLevel=2;voiceOpenUI(label,'Je vous écoute…');let done=false;
+  voiceKind='listen';rmsLevel=2;voiceOpenUI(label,'Je t’écoute…');let done=false;
   const finish=t=>{if(done)return;done=true;t=(t||'').trim();if(!t){voiceFail('Je n’ai rien entendu');return}vText.textContent=t;rmsLevel=0;vTimers.push(setTimeout(()=>{closeVoice(true);onResult(t)},650))};
   if(window.PoloNative&&PoloNative.listen){
     window.__speech=e=>{if(!voiceOpen||done)return;if(e.type==='rms')rmsLevel=Math.max(0,e.level);else if(e.type==='partial')vText.textContent=e.text;else if(e.type==='final')finish(e.text);
@@ -1229,7 +1234,7 @@ const destBtns={};
   tap(btn('destination','Dicter'),dictateDest);
   tap($('destination','.t:not(.f):not(.p)'),()=>go('recherche'));
 }
-function dictateDest(){listen('Où allez-vous ?',t=>{pickMode=pickMode||null;query=t;if(current!=='recherche')go('recherche');query=t;renderSearch()})}
+function dictateDest(){listen('Où on va ?',t=>{pickMode=pickMode||null;query=t;if(current!=='recherche')go('recherche');query=t;renderSearch()})}
 
 /* Recherche */
 const PLACES=[['Gare de Perpignan','Perpignan',14],['Céret','Centre-ville',30],['Canet-en-Roussillon','Plage',22],['Aéroport Perpignan-Rivesaltes','Rivesaltes',8],['Collioure','Port',38],['Argelès-sur-Mer','Plage',33],['Le Boulou','Centre',24],['Saint-Estève','Mairie',2],['Perpignan','Le Castillet',9],['Thuir','Centre',13],['Prades','Centre',41],['Font-Romeu','Station',95],['Rivesaltes','Centre',10],['Elne','Cathédrale',16]];
@@ -1538,7 +1543,7 @@ const crd=(t,k,inner,st)=>`<div style="background:var(--cFBF9F5,#FBF9F5);border-
       <div style="display:flex;gap:14px">
         ${[['1','Associe le téléphone','Dans les réglages Bluetooth de l’autoradio'],['2','Autorise le partage','Contacts et journal d’appels sur le téléphone'],['3','C’est prêt','Tout apparaît ici automatiquement']].map(x=>`<div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;padding:16px 18px;box-shadow:0 2px 10px rgba(43,42,40,.06)"><span style="display:inline-flex;width:30px;height:30px;border-radius:15px;background:#2F7FD8;color:#fff;font-weight:800;align-items:center;justify-content:center">${x[0]}</span><div style="font-weight:700;font-size:17px;margin-top:10px">${x[1]}</div><div class="m" style="font-size:14px;margin-top:4px;line-height:1.35">${x[2]}</div></div>`).join('')}
       </div>`,
-    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+swr('voice','Réveil en disant « Polo »','Dis « Polo » pour parler à l’assistant, sans toucher l’écran',!!(window.PoloNative&&PoloNative.getWake&&PoloNative.getWake()))+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche une voix pour l’entendre</small></span></div><div data-ttsui><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix</div><div data-ttsbox style="margin-top:8px"></div></div></div></div>`)}`,
+    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+swr('voice','Saluer au démarrage','Bonjour, anniversaires, trajet habituel ou musique',load('polo-greet')!=='0')+swr('voice','Réveil en disant « Polo »','Dis « Polo » pour parler à l’assistant, sans toucher l’écran',!!(window.PoloNative&&PoloNative.getWake&&PoloNative.getWake()))+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche une voix pour l’entendre</small></span></div><div data-ttsui><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix</div><div data-ttsbox style="margin-top:8px"></div></div></div></div>`)}`,
     'Navigation':`<div style="display:flex;gap:16px;align-items:stretch"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">${crd('Lieux favoris','pin','<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><div class="place" data-place="Maison"></div><div class="place" data-place="Travail"></div></div>')}${crd('Musique pendant les annonces','music','<div style="display:flex;gap:10px;margin-top:8px"><button class="g gm" data-gm="duck" style="height:52px;font-size:17px">Baisser</button><button class="g gm" data-gm="pause" style="height:52px;font-size:17px">Pause</button></div>')}</div><div style="flex:1;min-width:0">${crd('Guidage','nav',swr('nav','Guidage vocal','Annonces « tournez à droite… »',load('polo-navvoice')!=='0')+swr('toll','Éviter les péages','',load('polo-avoid-toll')==='1')+swr('road','Éviter les autoroutes','',load('polo-avoid-motorway')==='1')+swr('tilt','Vue inclinée','',true)+swr('b3d','Bâtiments en 3D','',false,true),'height:100%;box-sizing:border-box')}</div></div>`,
     'À propos':`<span data-name style="display:none"></span><div style="display:flex;gap:14px"><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Véhicule</div><div style="font-size:18px;font-weight:700;margin-top:2px">Volkswagen Polo</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Application</div><div style="font-size:18px;font-weight:700;margin-top:2px">Polo Radio 1.1</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Écran</div><div style="font-size:18px;font-weight:700;margin-top:2px" data-screen></div></div></div><div style="display:flex;gap:14px"><button class="pbtn" data-os="apps" style="flex:1">Autorisations de l’application</button><button class="pbtn" data-crashlog style="flex:1">Journal d’erreurs</button></div>`,
   };
@@ -1583,7 +1588,7 @@ const crd=(t,k,inner,st)=>`<div style="background:var(--cFBF9F5,#FBF9F5);border-
   const orig=$('reglages','span[aria-label="Activé"]');const N0=window.PoloNative;let on=N0&&N0.getAutostart?N0.getAutostart():load('polo-autostart')!=='0';
   const paintAuto=()=>{orig.style.background=on?'var(--aB5573A,#B5573A)':C('CFC8BB');const k=orig.querySelector('i');k.style.right=on?'4px':'32px';orig.setAttribute('aria-label',on?'Activé':'Désactivé')};paintAuto();
   tap(orig,()=>{on=!on;if(N0&&N0.setAutostart)N0.setAutostart(on);save('polo-autostart',on?'1':'0');orig.style.transition='background .2s';orig.style.background=on?'var(--aB5573A,#B5573A)':C('CFC8BB');const k=orig.querySelector('i');k.style.transition='right .2s cubic-bezier(.3,1.3,.5,1)';k.style.right=on?'4px':'32px';orig.setAttribute('aria-label',on?'Activé':'Désactivé')});
-  $$('reglages','.sw').forEach(s=>tap(s,()=>{const v=!s.classList.contains('on');s.classList.toggle('on',v);s.setAttribute('aria-checked',v);const nm=s.getAttribute('aria-label');if(nm==='Guidage vocal')setNavVoice(v);if(nm==='Bâtiments en 3D')RM.b3d=v;if(nm==='Vue inclinée')RM.tilt=v;if(nm==='Éviter les péages')save('polo-avoid-toll',v?'1':'0');if(nm==='Éviter les autoroutes')save('polo-avoid-motorway',v?'1':'0');{const AK={'Alertes radars fixes':'polo-alert-cams','Alerte perte du GPS (tunnel)':'polo-alert-gps','Annonces vocales des alertes':'polo-alert-voice','Lire les messages reçus à voix haute':'polo-sms-voice'};if(AK[nm])save(AK[nm],v?'1':'0');if(nm==='Réveil en disant « Polo »'&&window.PoloNative&&PoloNative.setWake)PoloNative.setWake(v)}toast(s.getAttribute('aria-label')+(v?' activé':' désactivé'))}));
+  $$('reglages','.sw').forEach(s=>tap(s,()=>{const v=!s.classList.contains('on');s.classList.toggle('on',v);s.setAttribute('aria-checked',v);const nm=s.getAttribute('aria-label');if(nm==='Guidage vocal')setNavVoice(v);if(nm==='Bâtiments en 3D')RM.b3d=v;if(nm==='Vue inclinée')RM.tilt=v;if(nm==='Éviter les péages')save('polo-avoid-toll',v?'1':'0');if(nm==='Éviter les autoroutes')save('polo-avoid-motorway',v?'1':'0');{const AK={'Alertes radars fixes':'polo-alert-cams','Alerte perte du GPS (tunnel)':'polo-alert-gps','Annonces vocales des alertes':'polo-alert-voice','Lire les messages reçus à voix haute':'polo-sms-voice','Saluer au démarrage':'polo-greet'};if(AK[nm])save(AK[nm],v?'1':'0');if(nm==='Réveil en disant « Polo »'&&window.PoloNative&&PoloNative.setWake)PoloNative.setWake(v)}toast(s.getAttribute('aria-label')+(v?' activé':' désactivé'))}));
   {const gms=$$('reglages','.gm'),N=window.PoloNative;let gm=N&&N.getGuidanceMode?N.getGuidanceMode():(load('polo-gm')||'pause');
    const paint=()=>gms.forEach(b=>{const on=b.dataset.gm===gm;b.style.background=on?C('2B2A28'):'';b.style.color=on?C('FBF9F5'):''});paint();
    gms.forEach(b=>tap(b,()=>{gm=b.dataset.gm;save('polo-gm',gm);if(N&&N.setGuidanceMode)N.setGuidanceMode(gm);paint();sayNav(gm==='duck'?'La musique baissera pendant les annonces':'La musique se mettra en pause pendant les annonces')}))}
@@ -2262,7 +2267,7 @@ boot();
   const sur=a=>a?' sur '+a:'';
   const VOICE={intro:(n,a)=>`Message de ${n}${sur(a)}.`,ask:'Tu veux répondre ?',lis:'Je t’écoute.',conf:m=>`J’envoie : ${m} ?`,
     sent:'Message envoyé.',cancel:'Message annulé.',no:'D’accord.',demo:'Bonjour, je serai ta voix pour la route.',
-    go:(n,d,h)=>`Itinéraire calculé vers ${n}. ${d}, arrivée prévue à ${h}.`,end:'Vous êtes arrivé à destination.'};
+    go:(n,d,h)=>`Itinéraire calculé vers ${n}. ${d}, arrivée prévue à ${h}.`,end:'Tu es arrivé à destination.'};
   const persona=()=>VOICE;
   // voix naturelles installées, rangées en féminines et masculines (les voix Google se reconnaissent à leur nom)
   function nuances(v){
@@ -2313,12 +2318,15 @@ boot();
     listen('Réponse à '+c.name,msg=>confirmSend(c,msg));
   }
   window.__voiceReply=voiceReply;
+  let lastNamed=0;
   function autoRead(c){
     if(ld('polo-sms-voice','1')==='0'||voiceOpen||/^appel/.test(current))return;
     chime();
     setTimeout(()=>{
       if(voiceOpen||/^appel/.test(current))return;
-      const p=persona(),intro=readText(c);
+      const p=persona();let intro=readText(c);
+      // le prénom de temps en temps (au plus une fois toutes les 20 minutes) : « Dylan, message de Paul… »
+      const nm=load('polo-name');if(nm&&Date.now()-lastNamed>20*60e3){intro=nm+', '+intro.charAt(0).toLowerCase()+intro.slice(1);lastNamed=Date.now()}
       if(window.__notifRead)window.__notifRead(c.number);
       if(!c.canReply){say(c.app,intro);return}
       say(c.app,intro+' '+p.ask,()=>listen('Répondre à '+c.name+' ?',t=>{
@@ -2363,9 +2371,113 @@ boot();
     const next=i=>{if(i>=list.length)return;const c=list[i];if(window.__notifRead)window.__notifRead(c.number);say(c.app,readText(c),()=>next(i+1))};
     reply(list.length>1?list.length+' nouveaux messages.':'Un nouveau message.',()=>next(0));
   }
+  // ---- mémoire de l'assistant : prénom, choses à retenir, dates, habitudes (tout reste dans l'autoradio) ----
+  const MEMK='polo-memo';
+  const mem=()=>{let o={};try{o=JSON.parse(load(MEMK)||'{}')}catch(e){}o.facts=o.facts||{};o.notes=o.notes||[];o.dates=o.dates||[];o.trips=o.trips||[];return o};
+  const memSave=o=>save(MEMK,JSON.stringify(o));
+  const myName=()=>load('polo-name')||'';
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  // « je / mon / ma » deviennent « tu / ton / ta » quand l'assistant répète
+  const conjTu=v=>v==='vais'?'vas':/e$/.test(v)?v+'s':v;   // je travaille → tu travailles
+  const toTu=s=>s.replace(/\bje suis\b/gi,'tu es').replace(/\bj['’]ai\b/gi,'tu as').replace(/\bje ([a-zàâçéèêëîïôûùü]+)/gi,(x,v)=>'tu '+conjTu(v)).replace(/\bje\b/gi,'tu').replace(/\bmon\b/gi,'ton')
+    .replace(/\bma\b/gi,'ta').replace(/\bmes\b/gi,'tes').replace(/\bmoi\b/gi,'toi').replace(/\bme\b/gi,'te').replace(/\bm['’]/gi,'t’');
+  const MOIS=['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+  const MOIS_DIT=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  // « mon anniversaire est le 12 mars », « l'anniversaire de maman est le 3 juin »
+  function parseDate(n){
+    const m=n.match(/(mon anniversaire|l anniversaire (?:de|d) (.+?)|la fete (?:de|d) (.+?)) (?:est|c est|tombe) le (\d{1,2}|premier|1er) ([a-z]+)/);
+    if(!m)return null;const mo=MOIS.indexOf(m[5]);if(mo<0)return null;
+    const d=/^\d+$/.test(m[4])?+m[4]:1,who=m[2]||m[3]||'',kind=m[3]?'fête':'anniversaire';
+    return {who:who?cap(who):'',kind,d,m:mo};
+  }
+  const dateTxt=x=>(x.d===1?'1er':x.d)+' '+MOIS_DIT[x.m];
+  function memoryCmd(t,n){
+    let m,o;
+    // prénom
+    if(/^(comment je m appelle|c est quoi mon (pre)?nom|quel est mon (pre)?nom|tu sais (comment je m appelle|qui je suis))/.test(n))
+      return reply(myName()?'Tu t’appelles '+myName()+'.':'Je ne connais pas encore ton prénom. Dis-moi : je m’appelle…'),1;
+    if((m=t.match(/^(?:je m['’]appelle|appelle[- ]moi|mon pr[ée]nom (?:est|c['’]est))\s+(.+)$/i))){
+      const nm=cap(m[1].trim().replace(/[.!?]+$/,''));save('polo-name',nm);reply('Enchanté, '+nm+' ! Je m’en souviendrai.');return 1}
+    // dates
+    const dt=parseDate(n.replace(/^(retiens|souviens toi|n oublie pas|note) que /,''));
+    if(dt){o=mem();o.dates=o.dates.filter(x=>!(x.who===dt.who&&x.kind===dt.kind));o.dates.push(dt);memSave(o);
+      reply('C’est noté : '+(dt.who?'l’'+dt.kind+' de '+dt.who:'ton anniversaire')+' est le '+dateTxt(dt)+'.');return 1}
+    if((m=n.match(/^quand (est|c est|tombe) (mon anniversaire|l anniversaire (?:de|d) (.+)|la fete (?:de|d) (.+))$/))){
+      const who=cap(m[3]||m[4]||''),kind=m[4]?'fête':'anniversaire',x=mem().dates.find(d=>d.who===who&&d.kind===kind);
+      return reply(x?(who?'L’'+kind+' de '+who:'Ton anniversaire')+' est le '+dateTxt(x)+'.':'Je ne connais pas cette date. Dis-moi par exemple : '+(who?'l’anniversaire de '+who:'mon anniversaire')+' est le 12 mars.'),1}
+    // retenir
+    if((m=t.match(/^(?:retiens|souviens[- ]toi|n['’]oublie pas|note|rappelle[- ]toi)\s+(?:que|qu['’])\s*(.+)$/i))){
+      const f=m[1].trim().replace(/[.!]+$/,''),k=f.match(/^(mon|ma|mes)\s+(.+?)\s+(est|sont|c['’]est)\s+(.+)$/i);o=mem();
+      if(k)o.facts[norm(k[2])]={art:k[1].toLowerCase(),label:k[2],val:k[4],v:k[3].toLowerCase()==='sont'?'sont':'est'};
+      else{o.notes=o.notes.filter(x=>x!==f);o.notes.push(f);o.notes=o.notes.slice(-30)}
+      memSave(o);reply('C’est noté, je retiens que '+toTu(f)+'.');return 1}
+    // questions sur ce qui a été retenu
+    if((m=n.match(/^(?:quel|quelle|quels|quelles) (?:est|sont) (?:mon|ma|mes) (.+)$|^c est quoi (?:mon|ma|mes) (.+)$|^(?:mon|ma|mes) (.+) c est quoi$/))){
+      const k=norm(m[1]||m[2]||m[3]),f=mem().facts[k];
+      if(f)return reply(cap(toTu(f.art))+' '+f.label+' '+f.v+' '+f.val+'.'),1;
+      const note=mem().notes.find(x=>norm(x).includes(k));
+      const asked=(t.match(/\b(mon|ma|mes)\s+(.+?)\s*(?:c['’]est quoi)?\s*\??$/i)||[0,'mon',k]);
+      return reply(note?cap(toTu(note))+'.':'Je ne sais pas encore. Dis-moi : retiens que '+asked[1].toLowerCase()+' '+asked[2]+' est…'),1}
+    if(/(qu est ce que tu sais sur moi|que sais tu (de|sur) moi|tu sais quoi sur moi|tu me connais)/.test(n)){
+      o=mem();const L=[];if(myName())L.push('tu t’appelles '+myName());
+      Object.values(o.facts).forEach(f=>L.push(toTu(f.art)+' '+f.label+' '+f.v+' '+f.val));
+      o.dates.forEach(d=>L.push((d.who?'l’'+d.kind+' de '+d.who:'ton anniversaire')+' est le '+dateTxt(d)));
+      o.notes.forEach(x=>L.push(toTu(x)));
+      return reply(L.length?'Je sais que '+L.slice(0,8).join(', ')+'.':'Je ne sais pas encore grand-chose sur toi. Dis-moi par exemple : retiens que ma couleur préférée est le bleu.'),1}
+    // oublier
+    if(/^oublie tout/.test(n)){
+      say('Assistant','Tu es sûr ? J’oublie tout ce que je sais sur toi, sauf ton prénom.',()=>listen('Tout oublier ?',a=>{
+        if(YES.test(a.trim())){const x=mem();memSave({trips:x.trips});reply('C’est oublié.')}else reply('D’accord, je garde tout.')}));return 1}
+    if((m=n.match(/^oublie (?:mon|ma|mes|l anniversaire (?:de|d)|que) (.+)$/))){
+      o=mem();const k=norm(m[1]);let ok=false;
+      if(o.facts[k]){delete o.facts[k];ok=true}
+      const before=o.dates.length;o.dates=o.dates.filter(d=>norm(d.who)!==k);if(o.dates.length<before)ok=true;
+      const nb=o.notes.length;o.notes=o.notes.filter(x=>!norm(x).includes(k));if(o.notes.length<nb)ok=true;
+      memSave(o);return reply(ok?'C’est oublié.':'Je ne savais rien là-dessus.'),1}
+    return 0;
+  }
+
+  // habitudes : on retient chaque trajet lancé (lieu, jour, heure) et le volume habituel
+  {const orig=startRoute;startRoute=function(name,km,silent,ll){
+    try{if(name){const o=mem(),d=new Date();o.trips.push({n:name,ll:ll||null,we:[0,6].includes(d.getDay())?1:0,h:d.getHours()+d.getMinutes()/60,t:Date.now()});o.trips=o.trips.slice(-80);memSave(o)}}catch(e){}
+    return orig.apply(this,arguments)}}
+  setInterval(()=>{const N=window.PoloNative;if(N&&N.getVolume&&playing){const v=+N.getVolume('media');if(v>5)save('polo-usual-vol',String(v))}},5*60e3);
+  // trajet habituel à cette heure-ci (au moins 3 fois, même type de jour, à 1 h près, sur 6 semaines)
+  function usualTrip(){
+    const d=new Date(),we=[0,6].includes(d.getDay())?1:0,h=d.getHours()+d.getMinutes()/60,c={};
+    mem().trips.filter(x=>x.we===we&&Math.abs(x.h-h)<=1&&Date.now()-x.t<42*864e5).forEach(x=>{c[x.n]=c[x.n]||{n:0,ll:x.ll};c[x.n].n++;c[x.n].ll=x.ll||c[x.n].ll});
+    const best=Object.entries(c).sort((a,b)=>b[1].n-a[1].n)[0];return best&&best[1].n>=3?{name:best[0],ll:best[1].ll}:null;
+  }
+  // au démarrage : salutation, anniversaires du jour, puis une seule proposition (appel, trajet ou musique)
+  function greet(){
+    if(load('polo-greet')==='0'||voiceOpen||/^appel/.test(current))return;
+    const d=new Date(),hr=d.getHours(),nm=myName(),o=mem();
+    const hello=(hr>=5&&hr<12?'Bonjour':hr>=12&&hr<18?'Bon après-midi':'Bonsoir')+(nm?' '+nm:'');
+    const today=o.dates.filter(x=>x.d===d.getDate()&&x.m===d.getMonth());
+    const mine=today.find(x=>!x.who),other=today.find(x=>x.who);
+    // volume revenu à un niveau extrême : on remet le volume habituel
+    const N=window.PoloNative,uv=+load('polo-usual-vol');
+    if(N&&N.getVolume&&N.setVolume&&uv){const v=+N.getVolume('media');if(v<8||v>92){N.setVolume('media',uv);if(typeof syncVol==='function')syncVol(uv)}}
+    let txt=mine?'Joyeux anniversaire'+(nm?' '+nm:'')+' ! ':hello+'. ';
+    if(other)txt+='Aujourd’hui, c’est l’'+other.kind+' de '+other.who+'. Tu veux l’appeler ?';
+    const trip=!other&&!routeActive?usualTrip():null;
+    if(trip)txt+=trip.name==='Maison'?'On rentre à la maison ?':trip.name==='Travail'?'On va au travail ?':'On va à '+trip.name+' ?';
+    const music=!other&&!trip&&!playing&&load('polo-was-playing')==='1';
+    if(music)txt+='Je remets ta musique ?';
+    if(!other&&!trip&&!music){reply(txt+'Bonne route !');return}
+    say('Assistant',txt,()=>listen('Assistant',a=>{
+      if(!YES.test(a.trim())){reply('D’accord.');return}
+      if(other)return callName(other.who);
+      if(trip){const p=savedPlace(trip.name);reply('C’est parti.');return startRoute(trip.name,null,false,(p&&p.ll)||trip.ll)}
+      if(music){if(!playing)togglePlay();reply('C’est parti.')}
+    }));
+  }
+  setInterval(()=>save('polo-was-playing',playing?'1':'0'),30e3);
+  window.__greet=greet;setTimeout(greet,6500);
   const SCREENS={meteo:'meteo',musique:'musique',notifications:'messages',messages:'messages',reglages:'reglages',parametres:'reglages',contacts:'contacts',telephone:'clavier',clavier:'clavier'};
   function handle(raw){
     const t=raw.trim(),n=norm(t);let m;
+    if(memoryCmd(t,n))return;
     if(/^(quelle heure|il est quelle heure|l heure)/.test(n))return reply('Il est '+hh(new Date())+'.');
     if(/(il va pleuvoir|de la pluie|parapluie)/.test(n))return weather(true);
     if(/(quel temps|la meteo|il fait (combien|chaud|froid|beau)|temperature)/.test(n))return weather();
