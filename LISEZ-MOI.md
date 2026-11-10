@@ -74,7 +74,7 @@ La liaison passe par le **partage de connexion** du téléphone (Wi-Fi), sinon p
 | Trajets récents | Enregistrés automatiquement |
 | Météo | Vraie météo à ta position (Open-Meteo) |
 | Notifications | Toutes les notifications du téléphone (via Polo Compagnon) : bandeau animé en haut de l'écran, écran Notifications, dernière notification sur l'accueil, réponses proposées selon le message |
-| Assistant vocal | Reconnaissance vocale d'Android (destination, réponse aux messages) et lecture à voix haute. Un message reçu est lu (petit son, puis « Message de Paul sur WhatsApp… Tu veux répondre ? »), la réponse se dicte et se confirme à la voix. Voix et vitesse : Réglages → Alertes → Voix |
+| Assistant vocal | Reconnaissance vocale d'Android (destination, réponse aux messages) et lecture à voix haute. Un message reçu est lu (petit son, puis « Message de Paul sur WhatsApp… Tu veux répondre ? »), la réponse se dicte et se confirme à la voix. Personnages (Robot, Écureuil, Géant, Majordome, Pirate, Commentateur, Endormi, accents étrangers…), voix de base et vitesse : Réglages → Alertes → Voix. Le GPS prend le timbre du personnage mais garde ses phrases normales |
 | Son & écran | Volume média, volume des appels et luminosité réels ; raccourcis vers les réglages Bluetooth et son |
 | Prénom | Réglages → À propos → Conducteur (affiché au démarrage) |
 | Guidage vocal | Annonces « Dans 300 mètres, tournez à droite… » ; bouton haut-parleur sur la carte pour couper ; Réglages → Navigation |

@@ -1163,7 +1163,7 @@ tap($('demarrage','.r'),()=>{clearTimeout(bootT);home()});
       <button class="rb call" aria-label="Répondre" style="display:none"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>`;
    card.querySelector('.ph').dataset.bell=BELL;
    tap(card.querySelector('.call'),()=>{const n=window.__homeNotif;if(n&&window.__notifOpen)window.__notifOpen(n.number,true);else go('messages')});
-   tap(card.querySelector('.msg'),()=>{const n=window.__homeNotif;if(!n){go('messages');return}if(window.__notifRead)window.__notifRead(n.number);speakOut(n.app,(n.isMsg?'Message de '+n.name+'. ':n.name+'. ')+n.last)});
+   tap(card.querySelector('.msg'),()=>{const n=window.__homeNotif;if(!n){go('messages');return}if(window.__notifRead)window.__notifRead(n.number);window.__readNotif(n)});
    tap(card,()=>{const n=window.__homeNotif;if(n&&window.__notifOpen)window.__notifOpen(n.number,false);else go('messages')});
   }
   {const WX={"css": "\n.sky{position:relative;overflow:hidden;background:linear-gradient(155deg,var(--aE8A87C,#E8A87C) 0%,var(--aC0603F,#C0603F) 58%,var(--a8F3E28,#8F3E28) 100%);color:#fff}\n.sky::after{content:\"\";position:absolute;inset:0;background:radial-gradient(120% 80% at 85% 0%,rgba(255,255,255,.28),transparent 60%);pointer-events:none}\n.sun{position:absolute;border-radius:50%;background:radial-gradient(circle at 38% 36%,#FFF6D2,#FFD56E 48%,#FFB443);box-shadow:0 0 24px 8px rgba(255,214,120,.55),0 0 70px 26px rgba(255,190,90,.22);animation:glow 4s ease-in-out infinite}\n.sun .rays{position:absolute;inset:-42%;width:184%;height:184%;animation:spin 36s linear infinite}\n.cloud{position:absolute;filter:drop-shadow(0 6px 10px rgba(0,0,0,.12));animation:drift 9s ease-in-out infinite alternate}\n.cloud.slow{animation-duration:14s;animation-delay:-5s;opacity:.75}\n.glass{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes drift{from{transform:translateX(-12px)}to{transform:translateX(16px)}}\n@keyframes glow{50%{box-shadow:0 0 30px 12px rgba(255,214,120,.65),0 0 90px 34px rgba(255,190,90,.28)}}\n\n.wxtint{position:absolute;inset:0;pointer-events:none;transition:background .6s ease;border-radius:inherit}\n.scene{position:absolute;z-index:1;pointer-events:none}\n.scene>*{position:absolute}\n.sc-sun{aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 38% 36%,#FFF6D2,#FFD56E 48%,#FFB443);box-shadow:0 0 18px 6px rgba(255,214,120,.55),0 0 50px 18px rgba(255,190,90,.2);animation:glow 4s ease-in-out infinite}\n.sc-sun svg{position:absolute;left:-42%;top:-42%;width:184%;height:184%;animation:spin 36s linear infinite}\n.sc-moon{aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 32%,#FFFDF3,#EEE5C6 72%);box-shadow:0 0 22px 6px rgba(255,248,220,.35);animation:glowm 5s ease-in-out infinite}\n.sc-moon::before,.sc-moon::after{content:\"\";position:absolute;border-radius:50%;background:rgba(200,188,150,.45)}\n.sc-moon::before{width:22%;height:22%;left:52%;top:26%}.sc-moon::after{width:14%;height:14%;left:30%;top:58%}\n.sc-cloud{aspect-ratio:64/40;animation:drift 9s ease-in-out infinite alternate;filter:drop-shadow(0 4px 8px rgba(0,0,0,.14))}\n.sc-cloud svg{display:block;width:100%;height:100%}\n.sc-cloud.b{animation-duration:13s;animation-delay:-6s}\n.sc-drop{width:4.2%;height:22%;border-radius:4px;background:linear-gradient(rgba(220,235,255,.2),#fff);animation:fall .95s linear infinite;opacity:0}\n.sc-flake{width:6%;aspect-ratio:1;border-radius:50%;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.8);animation:flake 3.2s linear infinite;opacity:0}\n.sc-bolt{animation:flash 3.4s linear infinite;filter:drop-shadow(0 0 8px rgba(255,230,120,.9))}\n.sc-bolt svg{display:block;width:100%;height:auto}\n.sc-fog{height:7%;border-radius:99px;background:rgba(255,255,255,.8);animation:drift 6s ease-in-out infinite alternate}\n.sc-fog.b{animation-duration:8s;animation-direction:alternate-reverse;opacity:.7}\n.sc-star{width:3.2%;aspect-ratio:1;border-radius:50%;background:#fff;box-shadow:0 0 6px #fff;animation:tw 2.4s ease-in-out infinite}\n@keyframes fall{0%{transform:translateY(-40%);opacity:0}15%{opacity:1}100%{transform:translateY(260%);opacity:0}}\n@keyframes flake{0%{transform:translate(0,-20%);opacity:0}15%{opacity:1}50%{transform:translate(120%,300%)}100%{transform:translate(-40%,620%);opacity:0}}\n@keyframes flash{0%,62%,100%{opacity:0}64%{opacity:1}67%{opacity:.25}70%,84%{opacity:1}}\n@keyframes tw{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}\n@keyframes glowm{50%{box-shadow:0 0 30px 10px rgba(255,248,220,.5)}}\n", "html": "<div class=\"sky\" style=\"position:absolute;inset:0;border-radius:20px\">\n<div class=\"wxtint\"><\/div>\n<div class=\"scene\" data-scene style=\"right:12px;top:calc(50% - 30px);width:76px;height:62px\"><\/div>\n<div style=\"position:relative;z-index:1;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 20px\">\n<div style=\"font-size:36px;font-weight:700;line-height:1;letter-spacing:-1px;text-shadow:0 2px 10px rgba(0,0,0,.15)\" data-wx-temp>14°<\/div>\n<div style=\"font-size:15px;font-weight:600;margin-top:6px\" data-wx-label>Ensoleillé<\/div>\n<div style=\"font-size:13px;opacity:.85;display:flex;align-items:center;gap:4px\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" style=\"fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round\"><path d=\"M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z\"/><circle cx=\"12\" cy=\"9\" r=\"2.5\"/><\/svg><span data-wx-city>Perpignan<\/span><\/div>\n<\/div><\/div>"};const card=$('accueil','svg[aria-label="Ensoleillé"]').parentElement;
@@ -1531,7 +1531,7 @@ const crd=(t,k,inner,st)=>`<div style="background:var(--cFBF9F5,#FBF9F5);border-
       <div style="display:flex;gap:14px">
         ${[['1','Associe le téléphone','Dans les réglages Bluetooth de l’autoradio'],['2','Autorise le partage','Contacts et journal d’appels sur le téléphone'],['3','C’est prêt','Tout apparaît ici automatiquement']].map(x=>`<div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;padding:16px 18px;box-shadow:0 2px 10px rgba(43,42,40,.06)"><span style="display:inline-flex;width:30px;height:30px;border-radius:15px;background:#2F7FD8;color:#fff;font-weight:800;align-items:center;justify-content:center">${x[0]}</span><div style="font-weight:700;font-size:17px;margin-top:10px">${x[1]}</div><div class="m" style="font-size:14px;margin-top:4px;line-height:1.35">${x[2]}</div></div>`).join('')}
       </div>`,
-    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche une voix ou une vitesse pour l’écouter</small></span></div><div data-ttsbox style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0 58px"></div><div data-ttsrate style="display:flex;gap:8px;margin:10px 0 0 58px"></div></div>`)}`,
+    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche un personnage pour l’entendre</small></span></div><div data-ttsui><div data-ttsgrid style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px"></div><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix de base</div><div data-ttsbox style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div></div><div style="margin-top:14px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Vitesse</div><div data-ttsrate style="display:flex;gap:8px;margin-top:8px"></div></div></div>`)}`,
     'Navigation':`<div style="display:flex;gap:16px;align-items:stretch"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">${crd('Lieux favoris','pin','<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><div class="place" data-place="Maison"></div><div class="place" data-place="Travail"></div></div>')}${crd('Musique pendant les annonces','music','<div style="display:flex;gap:10px;margin-top:8px"><button class="g gm" data-gm="duck" style="height:52px;font-size:17px">Baisser</button><button class="g gm" data-gm="pause" style="height:52px;font-size:17px">Pause</button></div>')}</div><div style="flex:1;min-width:0">${crd('Guidage','nav',swr('nav','Guidage vocal','Annonces « tournez à droite… »',load('polo-navvoice')!=='0')+swr('toll','Éviter les péages','',load('polo-avoid-toll')==='1')+swr('road','Éviter les autoroutes','',load('polo-avoid-motorway')==='1')+swr('tilt','Vue inclinée','',true)+swr('b3d','Bâtiments en 3D','',false,true),'height:100%;box-sizing:border-box')}</div></div>`,
     'À propos':`<span data-name style="display:none"></span><div style="display:flex;gap:14px"><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Véhicule</div><div style="font-size:18px;font-weight:700;margin-top:2px">Volkswagen Polo</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Application</div><div style="font-size:18px;font-weight:700;margin-top:2px">Polo Radio 1.1</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Écran</div><div style="font-size:18px;font-weight:700;margin-top:2px" data-screen></div></div></div><div style="display:flex;gap:14px"><button class="pbtn" data-os="apps" style="flex:1">Autorisations de l’application</button><button class="pbtn" data-crashlog style="flex:1">Journal d’erreurs</button></div>`,
   };
@@ -2225,7 +2225,7 @@ boot();
     el.addEventListener('pointerup',e=>{el.classList.remove('hold');const dy=y0==null?0:e.clientY-y0;y0=null;
       if(dy<-25){hide();return}
       const b=e.target.closest('button');if(!c)return;
-      if(b&&b.dataset.a==='spk'){if(window.__notifRead)window.__notifRead(c.number);speakOut(c.app,(c.isMsg?'Message de '+c.name+'. ':c.name+'. ')+c.last);hide();return}
+      if(b&&b.dataset.a==='spk'){if(window.__notifRead)window.__notifRead(c.number);window.__readNotif(c);hide();return}
       if(b&&b.dataset.a==='mic'){hide();window.__notifOpen&&window.__notifOpen(c.number,true);return}
       hide();window.__notifOpen&&window.__notifOpen(c.number,false)});
     el.addEventListener('pointercancel',()=>{y0=null;el.classList.remove('hold');arm(3000)});
@@ -2250,6 +2250,56 @@ boot();
         g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.22,t0+d+.02);g.gain.exponentialRampToValueAtTime(.001,t0+d+.55);
         o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+.6)})}catch(e){}
   }
+  // personnages de l'assistant : timbre (hauteur, vitesse, accent) + phrases à eux autour des messages
+  const sur=a=>a?' sur '+a:'',par=a=>a?' par '+a:'';
+  const PERSONAS=[
+    {id:'classique',e:'🎙️',n:'Classique',t:'Claire et posée',p:1,r:1,
+      intro:(n,a)=>`Message de ${n}${sur(a)}.`,ask:'Tu veux répondre ?',lis:'Je t’écoute.',conf:m=>`J’envoie : ${m} ?`,
+      sent:'Message envoyé.',cancel:'Message annulé.',no:'D’accord.',demo:'Bonjour, je suis la voix classique. Bonne route !'},
+    {id:'robot',e:'🤖',n:'Robot',t:'Bip bip, ton copilote',p:.55,r:.85,
+      intro:(n,a)=>`Bip bip. Transmission entrante. Expéditeur : ${n}${a?'. Canal : '+a:''}. Contenu :`,ask:'Réponse requise ? Oui ou non.',
+      lis:'Enregistrement activé. Parlez.',conf:m=>`Message à transmettre : ${m}. Confirmer ?`,sent:'Transmission réussie. Bip.',
+      cancel:'Transmission annulée.',no:'Compris. Fin de communication.',demo:'Bip bip. Je suis un robot. Calcul de la trajectoire en cours.'},
+    {id:'ecureuil',e:'🐿️',n:'Écureuil',t:'Aigu et surexcité',p:2,r:1.35,
+      intro:(n,a)=>`Oh oh oh ! ${n} t’a écrit${sur(a)} !`,ask:'On répond, on répond ?',lis:'Vas-y vas-y, je t’écoute !',
+      conf:m=>`J’envoie « ${m} », d’accord d’accord ?`,sent:'Envoyé ! Youpi !',cancel:'Oh. Bon. Annulé.',no:'D’accord ! Une noisette ?',
+      demo:'Coucou ! Je suis l’écureuil, et je parle très très vite !'},
+    {id:'geant',e:'👹',n:'Géant',t:'Grave… et… lent',p:.35,r:.72,
+      intro:(n,a)=>`Un… message… de… ${n}.`,ask:'Répondre… tu veux… ?',lis:'Parle… petit… humain.',conf:m=>`J’envoie… ${m}… ?`,
+      sent:'C’est… parti.',cancel:'Annulé.',no:'Bien.',demo:'Je… suis… le… géant… de… la… Polo.'},
+    {id:'majordome',e:'🎩',n:'Majordome',t:'Votre Altesse est servie',p:.85,r:.92,
+      intro:(n,a)=>`Votre Altesse, ${n} vous a fait parvenir un message${par(a)}.`,ask:'Votre Altesse souhaite-t-elle répondre ?',
+      lis:'Je vous écoute, Votre Altesse.',conf:m=>`Dois-je transmettre : « ${m} » ?`,sent:'C’est transmis, Votre Altesse.',
+      cancel:'Fort bien, je n’envoie rien.',no:'Fort bien.',demo:'Bonsoir, Votre Altesse. Votre carrosse est avancé.'},
+    {id:'pirate',e:'🏴‍☠️',n:'Pirate',t:'Arrr, moussaillon !',p:.7,r:.95,
+      intro:(n,a)=>`Arrr moussaillon ! Un message de ${n} vient d’accoster${par(a)} !`,ask:'On lui renvoie une bordée ?',
+      lis:'Je t’écoute, matelot !',conf:m=>`J’envoie ce parchemin : ${m} ?`,sent:'Message parti au large !',
+      cancel:'On garde ça dans la cale.',no:'Plus tard, à l’abordage !',demo:'Arrr ! Je suis le capitaine de cette voiture, moussaillon !'},
+    {id:'commentateur',e:'🏟️',n:'Commentateur',t:'Le match en direct',p:1.15,r:1.3,
+      intro:(n,a)=>`Et c’est ${n} qui frappe${sur(a)} ! Incroyable !`,ask:'Va-t-il répondre ? Le suspense est total !',
+      lis:'À vous le micro !',conf:m=>`Il tente « ${m} » ! On valide ?`,sent:'Et c’est au fond des filets ! Message envoyé !',
+      cancel:'Oh, il renonce ! Annulé !',no:'Pas de réponse, le match continue !',demo:'Bonsoir à tous, et bienvenue en direct de la Polo !'},
+    {id:'endormi',e:'😴',n:'Endormi',t:'Bon… euh… quoi ?',p:.8,r:.7,
+      intro:(n,a)=>`Bon… euh… ${n} t’a écrit… je crois…`,ask:'Tu veux… répondre… ou on dort ?',lis:'Vas-y… je t’écoute… à peu près…',
+      conf:m=>`J’envoie… ${m}… c’est bon… ?`,sent:'C’est… envoyé… bonne nuit.',cancel:'Tant mieux… moins de travail…',
+      no:'Parfait… je me rendors…',demo:'Hmm… quoi… on est déjà arrivés… ?'},
+    ...[['en','🇬🇧','Accent anglais','Very chic'],['it','🇮🇹','Accent italien','Mamma mia !'],['es','🇪🇸','Accent espagnol','¡ Olé !'],['de','🇩🇪','Accent allemand','Sehr gut !']]
+      .map(([l,e,n,t])=>({id:'accent-'+l,accent:l,e,n,t,p:1,r:.95,
+        intro:(nm,a)=>`Message de ${nm}${sur(a)}.`,ask:'Tu veux répondre ?',lis:'Je t’écoute.',conf:m=>`J’envoie : ${m} ?`,
+        sent:'Message envoyé.',cancel:'Message annulé.',no:'D’accord.',demo:'Bonjour ! Je parle français avec un petit accent. Bonne route !'}))
+  ];
+  const persona=()=>PERSONAS.find(x=>x.id===ld('polo-tts-persona','classique'))||PERSONAS[0];
+  // applique le timbre (voix, vitesse × réglage de vitesse, hauteur) : vaut aussi pour le GPS
+  function applyStyle(){
+    const N=window.PoloNative;if(!N||!N.setTtsStyle)return;
+    const p=persona();let voice=ld('polo-tts-voice','');
+    if(p.accent){let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){}if(!v.ready)return;voice=(v.accents||{})[p.accent]||''}
+    N.setTtsStyle(voice,p.r*(+ld('polo-tts-speed','1')||1),p.p);
+  }
+  window.__PERSONAS=PERSONAS;window.__persona=persona;window.__applyStyle=applyStyle;
+  const endDot=s=>s.trim().replace(/[.!?…]*$/,m=>m||'.');
+  const readText=c=>c.isMsg?endDot(persona().intro(c.name,c.app!==c.name?c.app:'')+' '+c.last):endDot(c.app+'. '+c.name+'. '+c.last);
+  window.__readNotif=c=>speakOut(c.app,readText(c));
   const YES=/^(oui|ouais|ouai|yes|vas[- ]?y|ok|okay|d'accord|daccord|bien s[uû]r|carr[ée]ment|r[ée]ponds?|r[ée]pondre|envoie|envoyer|go)\b/i;
   const NO=/^(non|nan|nope|pas maintenant|plus tard|annule|annuler|stop|laisse|rien)\b/i;
   // lit un texte, puis appelle cb une fois la lecture terminée
@@ -2259,11 +2309,12 @@ boot();
     if(!(window.PoloNative&&PoloNative.speak)&&typeof ttsUtter!=='undefined'&&ttsUtter){const o=ttsUtter.onend;ttsUtter.onend=ttsUtter.onerror=ev=>{if(o)o(ev);next()}}
   }
   function confirmSend(c,msg){
-    say('Assistant','J’envoie : '+msg+' ?',()=>listen('Envoyer à '+c.name+' ?',ok=>{
-      if(!YES.test(ok.trim())){say('Assistant','Message annulé.');return}
+    const p=persona();
+    say('Assistant',p.conf(msg),()=>listen('Envoyer à '+c.name+' ?',ok=>{
+      if(!YES.test(ok.trim())){say('Assistant',p.cancel);return}
       const r=window.PoloNative&&PoloNative.phoneReply?PoloNative.phoneReply(c.number,msg):'offline';
       if(r==='ok'&&window.__notifRead)window.__notifRead(c.number);
-      say('Assistant',r==='ok'?'Message envoyé.':'Le téléphone n’est pas connecté, message non envoyé.');
+      say('Assistant',r==='ok'?p.sent:'Le téléphone n’est pas connecté, message non envoyé.');
     }));
   }
   // réponse dictée : « dicte », puis « J'envoie : … ? », puis « oui »
@@ -2277,13 +2328,13 @@ boot();
     chime();
     setTimeout(()=>{
       if(voiceOpen||/^appel/.test(current))return;
-      const intro=('Message de '+c.name+(c.app&&c.app!==c.name?' sur '+c.app:'')+'. '+c.last).trim().replace(/[.!?…]*$/,m=>m||'.');
+      const p=persona(),intro=readText(c);
       if(window.__notifRead)window.__notifRead(c.number);
       if(!c.canReply){say(c.app,intro);return}
-      say(c.app,intro+' Tu veux répondre ?',()=>listen('Répondre à '+c.name+' ?',t=>{
+      say(c.app,intro+' '+p.ask,()=>listen('Répondre à '+c.name+' ?',t=>{
         t=t.trim();
-        if(NO.test(t)){say('Assistant','D’accord.');return}
-        if(YES.test(t)&&t.split(/\s+/).length<=3){say('Assistant','Je t’écoute.',()=>voiceReply(c));return}
+        if(NO.test(t)){say('Assistant',p.no);return}
+        if(YES.test(t)&&t.split(/\s+/).length<=3){say('Assistant',p.lis,()=>voiceReply(c));return}
         confirmSend(c,t);   // réponse dictée directement
       }));
     },800);
@@ -2314,20 +2365,30 @@ boot();
 </script>
 <script>
 (function(){
-  // choix de la voix et de la vitesse de l'assistant (Réglages → Alertes → Voix)
-  function fillTts(box,rateBox){
-    let v={};try{v=JSON.parse(window.PoloNative.ttsVoices())}catch(e){return}
-    const sig=JSON.stringify(v);if(box.dataset.sig===sig)return;box.dataset.sig=sig;
+  // personnages, voix de base et vitesse de l'assistant (Réglages → Alertes → Voix)
+  const lget=(k,d)=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}};
+  const lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+  function fillTts(ui){
+    const N=window.PoloNative,PS=window.__PERSONAS;if(!PS)return;
+    let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){return}
+    const cur=lget('polo-tts-persona','classique'),base=lget('polo-tts-voice',''),speed=lget('polo-tts-speed','1');
+    const sig=JSON.stringify([v,cur,base,speed]);if(ui.dataset.sig===sig)return;ui.dataset.sig=sig;
+    const acc=v.accents||{},list=PS.filter(p=>!p.accent||acc[p.accent]),P=list.find(p=>p.id===cur)||list[0];
+    ui.querySelector('[data-ttsgrid]').innerHTML=list.map(p=>{const on=p.id===P.id;return `<button data-tp="${p.id}" style="border:0;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;font-family:system-ui,sans-serif;transition:transform .15s;${on?'background:linear-gradient(135deg,var(--aE8A87C,#E8A87C),var(--aC0603F,#C0603F));color:#fff;box-shadow:0 6px 16px rgba(var(--rgbacc,192,96,63),.4);transform:scale(1.03)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">
+      <span style="flex:none;width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-size:24px;background:${on?'rgba(255,255,255,.25)':'var(--cFBF9F5,#FBF9F5)'}">${p.e}</span>
+      <span style="min-width:0"><b style="display:block;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.n}</b><small style="display:block;font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.t}</small></span></button>`}).join('');
     const chip=(lab,on,attr)=>`<button ${attr} style="border:0;cursor:pointer;font:600 15px system-ui,sans-serif;padding:9px 16px;border-radius:18px;${on?'background:var(--aC0603F,#C0603F);color:#fff;box-shadow:0 4px 12px rgba(var(--rgbacc,192,96,63),.35)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">${lab}</button>`;
     const voices=v.voices||[];
-    box.innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':
-      chip('Par défaut',!v.current||!voices.some(x=>x.id===v.current),'data-tv=""')+voices.map(x=>chip(x.label,x.id===v.current,`data-tv="${x.id.replace(/"/g,'&quot;')}"`)).join('');
-    const r=+v.rate||1;
-    rateBox.innerHTML=[['Lente',.8],['Normale',1],['Rapide',1.2]].map(([l,x])=>chip('⏱ '+l,Math.abs(r-x)<.05,`data-tr="${x}"`)).join('');
-    box.querySelectorAll('[data-tv]').forEach(b=>b.onclick=()=>{window.PoloNative.setTtsVoice(b.dataset.tv);box.dataset.sig='';setTimeout(()=>fillTts(box,rateBox),150)});
-    rateBox.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{window.PoloNative.setTtsRate(+b.dataset.tr);box.dataset.sig='';setTimeout(()=>fillTts(box,rateBox),150)});
+    ui.querySelector('[data-ttsbase]').style.display=P.accent?'none':'';
+    ui.querySelector('[data-ttsbox]').innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':
+      chip('Par défaut',!base||!voices.some(x=>x.id===base),'data-tv=""')+voices.map(x=>chip(x.label,x.id===base,`data-tv="${x.id.replace(/"/g,'&quot;')}"`)).join('');
+    ui.querySelector('[data-ttsrate]').innerHTML=[['Lente','0.8'],['Normale','1'],['Rapide','1.2']].map(([l,x])=>chip('⏱ '+l,speed===x,`data-tr="${x}"`)).join('');
+    const demo=()=>{const p=window.__persona();window.__applyStyle();speakOut(p.e+' '+p.n,p.demo);ui.dataset.sig=''};
+    ui.querySelectorAll('[data-tp]').forEach(b=>b.onclick=()=>{lset('polo-tts-persona',b.dataset.tp);demo();fillTts(ui)});
+    ui.querySelectorAll('[data-tv]').forEach(b=>b.onclick=()=>{lset('polo-tts-voice',b.dataset.tv);demo();fillTts(ui)});
+    ui.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{lset('polo-tts-speed',b.dataset.tr);demo();fillTts(ui)});
   }
-  function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsbox]').forEach(b=>{if(b.getClientRects().length)fillTts(b,b.nextElementSibling)})})}
+  function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsui]').forEach(u=>{if(u.getClientRects().length)fillTts(u)})})}
   if(window.PoloNative&&window.PoloNative.ttsVoices)setInterval(()=>{if(!document.hidden)updTts()},1000);
   function phoneRow(row){
     let lk={};try{lk=JSON.parse(window.PoloNative.phoneLink())}catch(e){return ''}

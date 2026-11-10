@@ -349,55 +349,56 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         }
     }
 
-    /** Applique la voix et la vitesse choisies dans Réglages → Alertes → Voix. */
+    /** Applique le timbre choisi (voix, vitesse, hauteur) : vaut pour les messages et pour le GPS. */
     private fun applyTtsPrefs() {
         val p = MainActivity.prefs(act)
         val id = p.getString("ttsVoice", null)
-        if (id != null) try {
-            tts?.voices?.firstOrNull { it.name == id }?.let { tts?.voice = it }
+        try {
+            val v = if (id != null) tts?.voices?.firstOrNull { it.name == id } else null
+            if (v != null) tts?.voice = v else tts?.language = Locale.FRANCE
         } catch (e: Exception) {
         }
         tts?.setSpeechRate(p.getFloat("ttsRate", 1f))
+        tts?.setPitch(p.getFloat("ttsPitch", 1f))
     }
 
-    /** Voix françaises disponibles : {"ready", "current", "rate", "voices":[{id, label}]}. */
+    /**
+     * Voix disponibles : {"ready", "voices":[{id, label}] (françaises),
+     * "accents":{"en": id, "it": id, "es": id, "de": id} (voix étrangères qui liront le français)}.
+     */
     @JavascriptInterface
     fun ttsVoices(): String {
         main.post { ensureTts() }
         val out = JSONObject().put("ready", ttsReady)
-            .put("current", MainActivity.prefs(act).getString("ttsVoice", "") ?: "")
-            .put("rate", MainActivity.prefs(act).getFloat("ttsRate", 1f).toDouble())
         val arr = JSONArray()
+        val accents = JSONObject()
         if (ttsReady) try {
-            val list = tts?.voices?.filter { it.locale.language == "fr" && !it.isNetworkConnectionRequired }
-                ?.sortedWith(compareBy({ it.locale.country != "FR" }, { it.name })) ?: emptyList()
+            val local = tts?.voices?.filter { !it.isNetworkConnectionRequired } ?: emptyList()
+            val fr = local.filter { it.locale.language == "fr" }
+                .sortedWith(compareBy({ it.locale.country != "FR" }, { it.name }))
             val region = mapOf("FR" to "", "CA" to " · Québec", "BE" to " · Belgique", "CH" to " · Suisse")
-            list.forEachIndexed { i, v ->
+            fr.forEachIndexed { i, v ->
                 arr.put(JSONObject().put("id", v.name).put("label", "Voix ${i + 1}" + (region[v.locale.country] ?: " · ${v.locale.country}")))
+            }
+            val pref = mapOf("en" to "GB", "it" to "IT", "es" to "ES", "de" to "DE")
+            for ((lang, country) in pref) {
+                val cands = local.filter { it.locale.language == lang }.sortedWith(compareBy({ it.locale.country != country }, { it.name }))
+                cands.firstOrNull()?.let { accents.put(lang, it.name) }
             }
         } catch (e: Exception) {
         }
-        return out.put("voices", arr).toString()
+        return out.put("voices", arr).put("accents", accents).toString()
     }
 
-    /** Choisit la voix ("" = voix par défaut) et lit un exemple. */
+    /** Règle le timbre : voix ("" = française par défaut), vitesse et hauteur (1 = normal). */
     @JavascriptInterface
-    fun setTtsVoice(id: String) {
-        MainActivity.prefs(act).edit().putString("ttsVoice", id.ifEmpty { null }).apply()
-        main.post {
-            ensureTts()
-            if (id.isEmpty()) tts?.language = Locale.FRANCE
-            applyTtsPrefs()
-        }
-        speak("Bonjour, je suis ta nouvelle voix.")
-    }
-
-    /** Vitesse de lecture (0.7 à 1.4) et lit un exemple. */
-    @JavascriptInterface
-    fun setTtsRate(rate: Double) {
-        MainActivity.prefs(act).edit().putFloat("ttsRate", rate.toFloat().coerceIn(0.5f, 2f)).apply()
-        main.post { ensureTts(); applyTtsPrefs() }
-        speak("Voici ma nouvelle vitesse de lecture.")
+    fun setTtsStyle(voice: String, rate: Double, pitch: Double) {
+        MainActivity.prefs(act).edit()
+            .putString("ttsVoice", voice.ifEmpty { null })
+            .putFloat("ttsRate", rate.toFloat().coerceIn(0.4f, 2.5f))
+            .putFloat("ttsPitch", pitch.toFloat().coerceIn(0.25f, 2.5f))
+            .apply()
+        main.post { ensureTts(); if (ttsReady) applyTtsPrefs() }
     }
 
     private var pendingNav = false
