@@ -1894,6 +1894,34 @@ async function spPlay(body){
   spMsg('Aucun appareil Spotify','Ouvre Spotify sur ton téléphone ou sur l’autoradio, puis réessaie.');
 }
 
+/* ---------- assistant : « mets Bohemian Rhapsody de Queen » ----------
+   kind : 'track' | 'artist' | 'album' | 'playlist' | '' (devine). Renvoie ce qui est lancé, ou null. */
+window.__spVoicePlay=async(q,kind,artist)=>{
+  if(!spOn())return null;
+  const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const full=artist?q+' '+artist:q;
+  try{
+    if(kind==='playlist'){ // d'abord les playlists de l'utilisateur, puis le catalogue
+      const mine=await api('/me/playlists?limit=50').catch(()=>null);
+      const p=((mine&&mine.items)||[]).find(x=>x&&norm(x.name).includes(norm(q)));
+      const pl=p||((await api('/search?type=playlist&limit=5&q='+encodeURIComponent(q))).playlists.items||[]).find(Boolean);
+      if(!pl)return null;await spPlay({context_uri:pl.uri});return {what:'la playlist '+pl.name};
+    }
+    if(kind==='album'){
+      const al=(await api('/search?type=album&limit=1&q='+encodeURIComponent(full))).albums.items[0];
+      if(!al)return null;await spPlay({context_uri:al.uri});return {what:'l’album '+al.name+' de '+al.artists[0].name};
+    }
+    const r=await api('/search?type=track,artist&limit=5&q='+encodeURIComponent(full));
+    const ar=(r.artists&&r.artists.items||[])[0],tr=(r.tracks&&r.tracks.items||[])[0];
+    // « mets Queen » : le nom correspond à un artiste → toute sa musique
+    if(kind==='artist'||(!artist&&kind!=='track'&&ar&&norm(ar.name)===norm(q))){
+      if(!ar)return null;await spPlay({context_uri:ar.uri});return {what:ar.name};
+    }
+    if(!tr)return null;
+    await spPlay({uris:[tr.uri]});return {what:tr.name+' de '+tr.artists[0].name};
+  }catch(e){return null}
+};
+
 /* ---------- file « À suivre » sur l'écran Musique ---------- */
 function spRenderQueue(){
   const g=$('musique','.qgrid'),lab=textEl('musique','Sources')||textEl('musique','À suivre');if(!g)return;
@@ -2367,6 +2395,31 @@ boot();
   const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’'-]/g,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
   const hh=d=>d.getHours()+' heures'+(d.getMinutes()?' '+String(d.getMinutes()).padStart(2,'0'):'');
   const reply=(t,cb)=>say('Assistant',t,cb);
+/* Lancer une musique précise à la voix : Spotify (compte relié) d'abord, sinon l'appli de musique elle-même. */
+async function playMusic(raw){
+  let q=raw.trim(),kind='',artist='',app='';
+  // « … sur Spotify » / « … sur YouTube Music »
+  const onApp=q.match(/\s+(?:sur|avec|dans)\s+(spotify|youtube(?: music)?|you tube(?: music)?)$/i);
+  if(onApp){app=/spotify/i.test(onApp[1])?'com.spotify.music':'com.google.android.apps.youtube.music';q=q.slice(0,onApp.index)}
+  let k;
+  if((k=q.match(/^(?:ma |la |une )?playlist\s+(.+)$/i))){kind='playlist';q=k[1]}
+  else if((k=q.match(/^(?:l['’]|un )?album\s+(.+)$/i))){kind='album';q=k[1]}
+  else if((k=q.match(/^(?:la |une )?(?:chanson|musique|titre|morceau|son)\s+(.+)$/i))){kind='track';q=k[1]}
+  else if((k=q.match(/^(?:du |de la |de l['’]|des |un peu de |quelque chose de |l['’]artiste |le groupe )\s*(.+)$/i))){kind='artist';q=k[1]}
+  // « Bohemian Rhapsody de Queen »
+  if(kind!=='artist'&&kind!=='playlist'&&(k=q.match(/^(.+?)\s+(?:de|des|du|par)\s+(.+)$/i))){q=k[1];artist=k[2]}
+  q=q.replace(/^(?:la |le |les |l['’])(?=\S)/i,'').trim();
+  if(!q)return reply('Qu’est-ce que tu veux écouter ?');
+  const label=artist?q+' de '+artist:q;
+  if(!app||app==='com.spotify.music'){
+    const sp=window.__spVoicePlay?await window.__spVoicePlay(q,kind,artist):null;
+    if(sp)return reply('Je mets '+sp.what+'.');
+  }
+  const N=window.PoloNative;
+  if(N&&N.playFromSearch&&N.playFromSearch((kind==='playlist'?'playlist ':kind==='album'?'album ':'')+q+(artist?' '+artist:''),app||''))
+    return reply('Je lance '+label+'.');
+  reply('Je n’ai pas trouvé '+label+'. Installe Spotify ou YouTube Music, ou relie ton compte Spotify dans les réglages.');
+}
   function goTo(dest){
     const d=norm(dest),place=/^(la )?maison$|^chez moi$/.test(d)?'Maison':/^(le |au )?(travail|boulot|bureau)$/.test(d)?'Travail':null;
     if(place){const p=savedPlace(place),lbl=place==='Maison'?'la maison':'le travail';
@@ -2645,8 +2698,11 @@ boot();
     if(/(monte|augmente|plus fort|hausse)/.test(n))return volume(15);
     if(/(baisse|diminue|moins fort)/.test(n))return volume(-15);
     if((m=n.match(/^(ouvre|affiche|montre|va sur|va dans)( la| les| le| l)? (\w+)/))&&SCREENS[m[3]]){go(SCREENS[m[3]]);return}
+    // « mets Bohemian Rhapsody de Queen », « joue la playlist Chill », « lance du Angèle sur YouTube Music »
+    if((m=t.match(/^(?:mets|met|joue|jouer|lance|lancer|[ée]coute|[ée]couter|fais[- ](?:moi[- ])?[ée]couter|passe|je veux [ée]couter|j['’]ai envie d['’][ée]couter)(?:[- ]moi)?\s+(.+?)[.!?]*$/i))
+       &&!/^(le |la |l )?(volume|son|navigation|gps|guidage|radio|minuteur)\b/i.test(m[1])&&!/^(?:la |une |de la )?musique$/i.test(m[1]))return playMusic(m[1]);
     if(/(que sais tu faire|qu est ce que tu sais faire|aide moi|^aide$)/.test(n))
-      return reply('Tu peux me dire par exemple : emmène-moi à la maison, quel temps fait-il, qu’est-ce que j’ai aujourd’hui, c’est l’anniversaire de qui, appelle Paul, lis mes messages, mets la musique, ou retiens que ma couleur préférée est le bleu.');
+      return reply('Tu peux me dire par exemple : emmène-moi à la maison, quel temps fait-il, qu’est-ce que j’ai aujourd’hui, c’est l’anniversaire de qui, appelle Paul, lis mes messages, mets Bohemian Rhapsody de Queen, joue ma playlist Chill, ou retiens que ma couleur préférée est le bleu.');
     reply('Je n’ai pas compris. Dis par exemple : emmène-moi à la maison, ou quel temps fait-il.');
   }
   // par le bouton, ou en disant « Polo » (petit son, puis écoute)

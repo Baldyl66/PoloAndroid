@@ -83,6 +83,28 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         return true
     }
 
+    /**
+     * Demande à une appli de musique de jouer une recherche (« Bohemian Rhapsody Queen »).
+     * Marche avec Spotify et YouTube Music, même sans compte relié à Polo Radio.
+     * pkg vide = première appli installée parmi Spotify puis YouTube Music.
+     */
+    @JavascriptInterface
+    fun playFromSearch(query: String, pkg: String): Boolean {
+        val pkgs = if (pkg.isNotEmpty()) listOf(pkg) else listOf("com.spotify.music", "com.google.android.apps.youtube.music")
+        val target = pkgs.firstOrNull { act.packageManager.getLaunchIntentForPackage(it) != null } ?: return false
+        val i = Intent(android.provider.MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+            .setPackage(target)
+            .putExtra(android.app.SearchManager.QUERY, query)
+            .putExtra(android.provider.MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        main.post {
+            try { act.startActivity(i) } catch (e: Exception) {
+                try { act.startActivity(i.setPackage(null)) } catch (x: Exception) {}
+            }
+        }
+        return true
+    }
+
     /** Ouvre une adresse dans le navigateur (connexion Spotify). */
     @JavascriptInterface
     fun openUrl(url: String) {
