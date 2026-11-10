@@ -2268,10 +2268,8 @@ boot();
   function nuances(v){
     const fr=((v&&v.voices)||[]).filter(x=>!x.label.includes('·')),isM=x=>/x-(frb|frd)-/.test(x.id);   // France uniquement
     const pick=(list,g)=>{
-      const out=list.slice(0,3).map(x=>({v:x.id,p:1}));
-      // moins de 3 voix installées : on complète avec un autre ton d'une voix existante
-      const tones=[.92,1.08];for(let k=0;out.length<3&&list.length;k++)out.push({v:list[k%list.length].id,p:tones[k%2]});
-      return out.map((x,i)=>({id:g+(i+1),g,n:'Voix '+(i+1),v:x.v,p:x.p}));
+      // seulement les vraies voix installées (3 au plus), sans changer leur ton
+      return list.slice(0,3).map((x,i)=>({id:g+(i+1),g,n:'Voix '+(i+1),v:x.id,p:1}));
     };
     const out=pick(fr.filter(x=>!isM(x)),'f').concat(pick(fr.filter(isM),'m'));
     // japonais : une voix féminine et une masculine (elles liront le français avec leur accent)
