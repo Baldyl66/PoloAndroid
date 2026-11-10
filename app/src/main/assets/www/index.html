@@ -2689,7 +2689,8 @@ async function playMusic(raw){
     let txt=hello;
     if(body)txt+=' '+body+(q?', '+q:'. Je te souhaite de passer une bonne route !');
     else txt+=q?' '+cap(q):' Je te souhaite de passer une bonne route !';
-    quietSay(txt);
+    // bonjour affiché dans la fenêtre de l'assistant, qui se referme seule (pas de question, pas d'écoute)
+    reply(txt);
   }
   // infos du téléphone arrivées après la salutation : ce qui est nouveau, et la batterie faible
   window.__phoneInfo=()=>{
