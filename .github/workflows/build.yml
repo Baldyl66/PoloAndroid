@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -44,3 +47,15 @@ jobs:
         with:
           name: PoloCompagnon-apk
           path: PoloCompagnon.apk
+
+      - name: Publier dans Releases (téléchargeable sans compte)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: derniere
+          name: Dernière version
+          body: "Autoradio : PoloRadio.apk · Téléphone : PoloCompagnon.apk (commit ${{ github.sha }})"
+          make_latest: true
+          files: |
+            PoloRadio.apk
+            PoloCompagnon.apk
