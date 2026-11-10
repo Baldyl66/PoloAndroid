@@ -2498,9 +2498,9 @@ boot();
   const ALA=/^(banque|mairie|poste|pharmacie|salle|gym|piscine|boulangerie|gare|plage|clinique|prefecture|laverie)$/;
   function evPhrase(e){
     const t=e.title.trim(),k=norm(t),h=e.allDay?'':' à '+hourTxt(e.start);
-    if(AU.test(k))return 'rendez-vous au '+lc(t)+h;
-    if(ALA.test(k))return 'rendez-vous à la '+lc(t)+h;
-    return lc(t).replace(/^rdv\b/i,'rendez-vous')+h;
+    if(AU.test(k))return 'un rendez-vous au '+lc(t)+h;
+    if(ALA.test(k))return 'un rendez-vous à la '+lc(t)+h;
+    return lc(t).replace(/^(rdv|rendez-vous)\b/i,'un rendez-vous')+h;
   }
   // « c'est jour férié », « tu as rendez-vous au dentiste à 14 heures 30, puis réunion client à 17 heures »
   function dayClauses(ev){
@@ -2526,19 +2526,25 @@ boot();
       reply('D’accord.');
     });
   }
-  // message dicté à un contact, envoyé par le téléphone (Polo Compagnon)
+  // message dicté à un contact, envoyé par le téléphone (Polo Compagnon) :
+  // rien ne part sans ta confirmation, et « c'est envoyé » seulement quand le téléphone l'a confirmé
+  let smsWait=null;
   function dictateMsg(who,text){
     const f=first(who);
-    const confirm=msg=>say('Assistant','J’envoie à '+f+' : '+msg+' ?',()=>listen('Envoyer ?',ok=>{
-      if(!YES.test(ok.trim()))return reply('D’accord, je n’envoie rien.');
+    const confirm=msg=>say('Assistant','Voici ton message pour '+f+' : « '+msg+' ». Je l’envoie ?',()=>listen('Envoyer à '+f+' ?',ok=>{
+      if(!YES.test(ok.trim())&&!/^(confirme|c est bon|vas y envoie)/.test(norm(ok)))return reply('D’accord, je n’envoie rien.');
       const r=N.phoneSms?N.phoneSms(who,msg):'offline';
-      reply(r==='ok'?'C’est envoyé.':'Le téléphone n’est pas connecté, le message n’est pas parti.');
+      if(r!=='ok')return reply('Le téléphone n’est pas connecté, le message n’est pas parti.');
+      if(smsWait)clearTimeout(smsWait.t);
+      smsWait={f,t:setTimeout(()=>{smsWait=null;reply('Le téléphone ne m’a pas confirmé l’envoi, vérifie sur ton téléphone.')},10000)};
     }));
     if(text)return confirm(text);
     say('Assistant','Qu’est-ce que tu veux dire à '+f+' ?',()=>listen('Message à '+f,confirm));
   }
   window.__smsResult=d=>{
-    if(!d||d.ok)return;
+    if(!d)return;
+    const w=smsWait;if(w){clearTimeout(w.t);smsWait=null}
+    if(d.ok)return reply('C’est envoyé à '+(w?w.f:first(d.name))+'.');
     const why={noperm:'il faut autoriser les messages dans Polo Compagnon',nocontact:'je ne trouve pas '+first(d.name)+' dans les contacts du téléphone'}[d.why]||'le téléphone n’a pas réussi à l’envoyer';
     reply('Le message n’est pas parti, '+why+'.');
   };
