@@ -2359,6 +2359,12 @@ boot();
   const YES=/^(oui|ouais|ouai|yes|vas[- ]?y|ok|okay|d'accord|daccord|bien s[uû]r|carr[ée]ment|r[ée]ponds?|r[ée]pondre|envoie|envoyer|go)\b/i;
   const NO=/^(non|nan|nope|pas maintenant|plus tard|annule|annuler|stop|laisse|rien)\b/i;
   // lit un texte, puis appelle cb une fois la lecture terminée
+  // annonces automatiques (démarrage, infos du téléphone) : la voix seule, sans ouvrir l'assistant
+  function quietSay(text){
+    const N=window.PoloNative;
+    if(N&&N.speak){N.speak(text);return}
+    if(window.speechSynthesis){try{const u=new SpeechSynthesisUtterance(text);u.lang='fr-FR';speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+  }
   function say(label,text,cb){
     speakOut(label,text);if(!cb)return;let done=false;const next=()=>{if(done)return;done=true;setTimeout(cb,650)};
     const prev=window.__tts;window.__tts=e=>{if(prev)prev(e);if(e.type==='done'&&e.id!=='nav')next()};
@@ -2683,8 +2689,7 @@ async function playMusic(raw){
     let txt=hello;
     if(body)txt+=' '+body+(q?', '+q:'. Je te souhaite de passer une bonne route !');
     else txt+=q?' '+cap(q):' Je te souhaite de passer une bonne route !';
-    if(!after){reply(txt);return}
-    say('Assistant',txt,after);
+    quietSay(txt);
   }
   // infos du téléphone arrivées après la salutation : ce qui est nouveau, et la batterie faible
   window.__phoneInfo=()=>{
@@ -2694,8 +2699,8 @@ async function playMusic(raw){
     const b=phoneInfo().battery,lowKey='polo-lowbat';
     const low=b&&b.pct>=0&&b.pct<=15&&!b.charging&&Date.now()-(+load(lowKey)||0)>2*3600e3;
     if(others.length){markAnn(others.map(dateId));
-      say('Assistant','Au fait, '+bdayClause(others)+', '+callOrMsgQ(others),()=>callOrMessage(others[0].who));return}
-    if(low){save(lowKey,String(Date.now()));reply('Ton téléphone est à '+b.pct+' %, n’oublie pas de le charger avant qu’il ne s’éteigne.')}
+      quietSay('Au fait, '+bdayClause(others)+'.');return}
+    if(low){save(lowKey,String(Date.now()));quietSay('Ton téléphone est à '+b.pct+' %, n’oublie pas de le charger avant qu’il ne s’éteigne.')}
   };
   setInterval(()=>save('polo-was-playing',playing?'1':'0'),30e3);
   window.__greet=greet;setTimeout(greet,6500);
