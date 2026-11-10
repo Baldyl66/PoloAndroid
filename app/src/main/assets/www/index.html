@@ -783,13 +783,16 @@ function navVoiceTick(m,dist,speedMs){
   if(!m||!routeActive)return;
   const v=Math.max(8,speedMs||13),far=Math.max(400,Math.min(1500,v*35)),near=Math.max(120,v*9),now=Math.max(25,v*2.5);
   m.said=m.said||{};
-  if(m.t==='A'){if(dist<now*2&&!m.said.now){m.said.now=1;sayNav('Vous arrivez à destination')}return}
+  if(m.t==='A'){if(dist<now*2&&!m.said.now){m.said.now=1;sayNav(navArrivedText())}return}
   if(dist<=now&&!m.said.now){m.said.now=m.said.near=m.said.far=1;sayNav(sayManeuver(m).replace(/^./,c=>c.toUpperCase()));return}
   if(dist<=near&&dist>now*1.6&&!m.said.near){m.said.near=m.said.far=1;sayNav('Dans '+sayDist(dist)+', '+sayManeuver(m));return}
   if(dist<=far&&dist>near*1.8&&!m.said.far){m.said.far=1;sayNav('Dans '+sayDist(dist)+', '+sayManeuver(m))}
 }
-function navVoiceStart(name,meters,arrival){if(!meters)return;sayNav('Itinéraire calculé vers '+name+'. '+sayDist(meters).replace(/^(\d+),?/,'$&')+', arrivée prévue à '+hhmm(arrival).replace(':',' heures '))}
-function navVoiceArrived(){sayNav('Vous êtes arrivé à destination')}
+function navVoiceStart(name,meters,arrival){if(!meters)return;const d=sayDist(meters).replace(/^(\d+),?/,'$&'),h=hhmm(arrival).replace(':',' heures ');
+  const P=window.__persona&&window.__persona();sayNav(P&&P.go?P.go(name,d,h):'Itinéraire calculé vers '+name+'. '+d+', arrivée prévue à '+h)}
+// départ et arrivée à la façon du personnage choisi ; les consignes de virage restent normales
+function navArrivedText(){const P=window.__persona&&window.__persona();return P&&P.end?P.end:'Vous êtes arrivé à destination'}
+function navVoiceArrived(){sayNav(navArrivedText())}
 function setNavVoice(on){navVoiceOn=on;save('polo-navvoice',on?'1':'0');navRoot.querySelector('.vbtn').classList.toggle('off',!on);
   const sw=$$('reglages','.sw').find(x=>x.getAttribute('aria-label')==='Guidage vocal');if(sw){sw.classList.toggle('on',on);sw.setAttribute('aria-checked',on)}
   if(!on){try{window.PoloNative&&PoloNative.stopSpeaking?PoloNative.stopSpeaking():speechSynthesis.cancel()}catch(e){}}}
@@ -1531,7 +1534,7 @@ const crd=(t,k,inner,st)=>`<div style="background:var(--cFBF9F5,#FBF9F5);border-
       <div style="display:flex;gap:14px">
         ${[['1','Associe le téléphone','Dans les réglages Bluetooth de l’autoradio'],['2','Autorise le partage','Contacts et journal d’appels sur le téléphone'],['3','C’est prêt','Tout apparaît ici automatiquement']].map(x=>`<div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;padding:16px 18px;box-shadow:0 2px 10px rgba(43,42,40,.06)"><span style="display:inline-flex;width:30px;height:30px;border-radius:15px;background:#2F7FD8;color:#fff;font-weight:800;align-items:center;justify-content:center">${x[0]}</span><div style="font-weight:700;font-size:17px;margin-top:10px">${x[1]}</div><div class="m" style="font-size:14px;margin-top:4px;line-height:1.35">${x[2]}</div></div>`).join('')}
       </div>`,
-    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche un personnage pour l’entendre</small></span></div><div data-ttsui><div data-ttsgrid style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px"></div><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix de base</div><div data-ttsbox style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div></div><div style="margin-top:14px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Vitesse</div><div data-ttsrate style="display:flex;gap:8px;margin-top:8px"></div></div></div>`)}`,
+    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche un personnage pour l’entendre</small></span></div><div data-ttsui><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix</div><div data-ttsbox style="margin-top:8px"></div></div><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Personnage</div><div data-ttsgrid style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:8px"></div><div style="margin-top:14px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Vitesse</div><div data-ttsrate style="display:flex;gap:8px;margin-top:8px"></div></div></div>`)}`,
     'Navigation':`<div style="display:flex;gap:16px;align-items:stretch"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">${crd('Lieux favoris','pin','<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><div class="place" data-place="Maison"></div><div class="place" data-place="Travail"></div></div>')}${crd('Musique pendant les annonces','music','<div style="display:flex;gap:10px;margin-top:8px"><button class="g gm" data-gm="duck" style="height:52px;font-size:17px">Baisser</button><button class="g gm" data-gm="pause" style="height:52px;font-size:17px">Pause</button></div>')}</div><div style="flex:1;min-width:0">${crd('Guidage','nav',swr('nav','Guidage vocal','Annonces « tournez à droite… »',load('polo-navvoice')!=='0')+swr('toll','Éviter les péages','',load('polo-avoid-toll')==='1')+swr('road','Éviter les autoroutes','',load('polo-avoid-motorway')==='1')+swr('tilt','Vue inclinée','',true)+swr('b3d','Bâtiments en 3D','',false,true),'height:100%;box-sizing:border-box')}</div></div>`,
     'À propos':`<span data-name style="display:none"></span><div style="display:flex;gap:14px"><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Véhicule</div><div style="font-size:18px;font-weight:700;margin-top:2px">Volkswagen Polo</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Application</div><div style="font-size:18px;font-weight:700;margin-top:2px">Polo Radio 1.1</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Écran</div><div style="font-size:18px;font-weight:700;margin-top:2px" data-screen></div></div></div><div style="display:flex;gap:14px"><button class="pbtn" data-os="apps" style="flex:1">Autorisations de l’application</button><button class="pbtn" data-crashlog style="flex:1">Journal d’erreurs</button></div>`,
   };
@@ -2288,13 +2291,82 @@ boot();
         intro:(nm,a)=>`Message de ${nm}${sur(a)}.`,ask:'Tu veux répondre ?',lis:'Je t’écoute.',conf:m=>`J’envoie : ${m} ?`,
         sent:'Message envoyé.',cancel:'Message annulé.',no:'D’accord.',demo:'Bonjour ! Je parle français avec un petit accent. Bonne route !'}))
   ];
+  PERSONAS.forEach(p=>{p.g=p.accent?'Accents':p.id==='classique'?'':'Farfelus'});
+  // personnages métiers : timbre léger (la voix féminine / masculine fait le reste) et phrases à eux
+  const METIERS=[
+    {id:'commercant',e:'🧺',n:'Commerçant',t:'Et avec ceci ?',p:1.05,r:1.08,
+      intro:(n,a)=>`Bonjour bonjour ! Un petit message de ${n}, tout frais${sur(a)} !`,ask:'On lui répond ? Et avec ceci ?',lis:'Je vous écoute, c’est à vous !',
+      conf:m=>`Je vous emballe « ${m} » ?`,sent:'Et voilà, c’est envoyé ! Bonne journée !',cancel:'Pas de souci, je le garde de côté.',no:'Très bien, à votre service !',
+      demo:'Bonjour bonjour ! Qu’est-ce que je vous sers aujourd’hui ?',go:(n,d,h)=>`Et un itinéraire vers ${n}, un ! ${d}, livraison prévue à ${h}.`,end:'Et voilà, vous êtes livré ! Bonne journée !'},
+    {id:'informaticien',e:'💻',n:'Informaticien',t:'Paquet reçu, zéro bug',p:.95,r:1.05,
+      intro:(n,a)=>`Nouveau paquet reçu de ${n}${sur(a)}. Contenu :`,ask:'On répond ? Oui ou non.',lis:'Saisie vocale ouverte.',
+      conf:m=>`Je pousse « ${m} » en production ?`,sent:'Envoyé. Aucun bug détecté.',cancel:'Annulé. Rollback effectué.',no:'OK, je mets ça en file d’attente.',
+      demo:'Bonjour. As-tu essayé d’éteindre et de rallumer la voiture ?',go:(n,d,h)=>`Calcul terminé. Destination : ${n}. ${d}, arrivée estimée à ${h}.`,end:'Destination atteinte. Processus terminé avec succès.'},
+    {id:'pilote',e:'✈️',n:'Pilote de ligne',t:'Ici votre commandant',p:.9,r:.92,
+      intro:(n,a)=>`Mesdames et messieurs, ici votre commandant de bord. Nous avons reçu un message de ${n}${par(a)}.`,ask:'Souhaitez-vous répondre ?',lis:'Je vous écoute, la tour est en ligne.',
+      conf:m=>`Je transmets à la tour : « ${m} » ?`,sent:'Message transmis. Bon vol.',cancel:'Transmission annulée.',no:'Bien reçu. Restez attachés.',
+      demo:'Mesdames et messieurs, ici votre commandant de bord. Nous allons bientôt décoller.',go:(n,d,h)=>`Ici votre commandant de bord. Destination ${n}, ${d}. Atterrissage prévu à ${h}.`,end:'Nous sommes arrivés à destination. Merci d’avoir voyagé avec nous.'},
+    {id:'gare',e:'🚉',n:'Annonce de gare',t:'Votre attention s’il vous plaît',p:1,r:.9,
+      intro:(n,a)=>`Ding, dong. Votre attention s’il vous plaît. Message en provenance de ${n}${par(a)}.`,ask:'Voulez-vous répondre ?',lis:'Veuillez parler après le signal.',
+      conf:m=>`Message à destination de l’expéditeur : « ${m} ». On confirme ?`,sent:'Votre message est parti à l’heure.',cancel:'Message supprimé. Nous vous prions de nous excuser.',no:'Merci de votre attention.',
+      demo:'Ding, dong. Le train de la Polo partira dans quelques instants.',go:(n,d,h)=>`Ding, dong. Départ à destination de ${n}. ${d}, arrivée prévue à ${h}.`,end:'Ding, dong. Terminus, tout le monde descend.'},
+    {id:'coach',e:'🏋️',n:'Coach sportif',t:'On lâche rien !',p:1.1,r:1.15,
+      intro:(n,a)=>`Allez allez ! Message de ${n}${sur(a)} !`,ask:'On répond ? On lâche rien !',lis:'Vas-y, envoie du lourd !',
+      conf:m=>`J’envoie « ${m} » ? Allez !`,sent:'Envoyé ! Bravo champion !',cancel:'Pas grave, on recommence !',no:'OK, on garde l’énergie !',
+      demo:'Allez ! On s’échauffe, et on prend la route !',go:(n,d,h)=>`C’est parti pour ${n} ! ${d}, objectif ${h} ! Allez !`,end:'Arrivé ! Excellent travail, champion !'},
+    {id:'chef',e:'👨‍🍳',n:'Chef cuisinier',t:'Ça envoie en cuisine !',p:1,r:1.1,
+      intro:(n,a)=>`Ça envoie ! Un message de ${n}, servi chaud${sur(a)} !`,ask:'On lui répond, chef ?',lis:'J’écoute la commande !',
+      conf:m=>`Je dresse « ${m} » et j’envoie ?`,sent:'Envoyé ! Service !',cancel:'On jette, on recommence.',no:'Oui chef !',
+      demo:'Bonsoir ! Ce soir au menu : de la bonne route, bien assaisonnée.',go:(n,d,h)=>`Commande pour ${n} ! ${d}, servi à ${h} !`,end:'Et c’est servi ! Vous êtes arrivé.'},
+    {id:'agent',e:'🕵️',n:'Agent secret',t:'Transmission chiffrée',p:.85,r:.9,
+      intro:(n,a)=>`Transmission chiffrée. Source : ${n}. Message :`,ask:'On répond ? Ce message s’autodétruira.',lis:'Canal sécurisé. Parlez.',
+      conf:m=>`Je transmets : « ${m} » ?`,sent:'Message transmis. Mission accomplie.',cancel:'Transmission détruite.',no:'Bien reçu. Silence radio.',
+      demo:'Votre mission, si vous l’acceptez : arriver à l’heure.',go:(n,d,h)=>`Mission : rejoindre ${n}. ${d}. Arrivée prévue à ${h}.`,end:'Objectif atteint. Mission accomplie.'},
+    {id:'meteo',e:'🌦️',n:'Présentateur météo',t:'Perturbation en approche',p:1.05,r:1,
+      intro:(n,a)=>`Côté messages, une perturbation venue de ${n}${sur(a)}.`,ask:'On répond avant l’averse ?',lis:'Je vous écoute, ciel dégagé.',
+      conf:m=>`J’envoie « ${m} » ? Prévisions favorables.`,sent:'Envoyé. Grand soleil sur la conversation !',cancel:'Annulé, temps couvert.',no:'Très bien, on reste au sec.',
+      demo:'Bonsoir ! Aujourd’hui, grand soleil sur la Polo.',go:(n,d,h)=>`Prévisions pour ${n} : ${d}, arrivée attendue vers ${h}.`,end:'Vous êtes arrivé. Belle éclaircie sur votre destination !'},
+    {id:'mamie',e:'👵',n:'Mamie',t:'Oh mon petit !',p:1.15,r:.85,
+      intro:(n,a)=>`Oh mon petit, c’est ${n} qui t’écrit, comme c’est gentil !`,ask:'Tu lui réponds, mon chéri ?',lis:'Vas-y, Mamie t’écoute.',
+      conf:m=>`J’envoie « ${m} », c’est bien ça ?`,sent:'C’est envoyé, mon petit.',cancel:'Bon, tant pis.',no:'Comme tu veux, mon chéri.',
+      demo:'Oh, mon petit ! Tu as bien mangé ? Couvre-toi, il fait froid.',go:(n,d,h)=>`On va chez ${n}, mon petit. ${d}, on arrivera vers ${h}. Roule doucement !`,end:'On est arrivés, mon chéri. Tu n’as rien oublié ?'},
+    {id:'prof',e:'🧑‍🏫',n:'Professeur',t:'Silence, s’il vous plaît',p:.95,r:.95,
+      intro:(n,a)=>`Silence, s’il vous plaît. ${n} a envoyé un message${par(a)}.`,ask:'Une réponse ? Levez la main.',lis:'Je vous écoute. Articulez.',
+      conf:m=>`Votre réponse : « ${m} ». Vous êtes sûr ?`,sent:'Copie rendue. Très bien.',cancel:'Copie blanche, donc.',no:'Bien. On passe à la suite.',
+      demo:'Bonjour à tous. Sortez vos cartes, nous allons étudier l’itinéraire.',go:(n,d,h)=>`Exercice du jour : rejoindre ${n}. ${d}. Rendu prévu à ${h}.`,end:'Arrivé. Très bon travail, vous aurez une bonne note.'}
+  ];
+  METIERS.forEach(p=>p.g='Métiers');PERSONAS.splice(1,0,...METIERS);
+  // départ et arrivée du GPS pour les autres personnages
+  const NAV={
+    classique:[(n,d,h)=>`Itinéraire calculé vers ${n}. ${d}, arrivée prévue à ${h}.`,'Vous êtes arrivé à destination.'],
+    robot:[(n,d,h)=>`Bip. Trajectoire calculée. Cible : ${n}. ${d}. Arrivée : ${h}.`,'Bip bip. Destination atteinte.'],
+    ecureuil:[(n,d,h)=>`Youpi, on va à ${n} ! ${d}, on arrive à ${h} !`,'On est arrivés ! On est arrivés !'],
+    geant:[(n,d,h)=>`En… route… vers… ${n}. ${d}. Arrivée… à… ${h}.`,'Arrivé… enfin.'],
+    majordome:[(n,d,h)=>`Votre carrosse est avancé pour ${n}. ${d}, arrivée prévue à ${h}.`,'Nous sommes arrivés, Votre Altesse.'],
+    pirate:[(n,d,h)=>`Cap sur ${n}, moussaillons ! ${d}, on accoste à ${h} !`,'Terre en vue ! On est arrivés !'],
+    commentateur:[(n,d,h)=>`C’est parti pour ${n} ! ${d}, coup de sifflet final prévu à ${h} !`,'Et c’est la victoire ! Vous êtes arrivé !'],
+    endormi:[(n,d,h)=>`Bon… on va à ${n}… ${d}… on arrive vers ${h}… peut-être…`,'On est arrivés… je peux dormir ?']
+  };
+  PERSONAS.forEach(p=>{const d=NAV[p.id]||NAV.classique;p.go=p.go||d[0];p.end=p.end||d[1]});
   const persona=()=>PERSONAS.find(x=>x.id===ld('polo-tts-persona','classique'))||PERSONAS[0];
-  // applique le timbre (voix, vitesse × réglage de vitesse, hauteur) : vaut aussi pour le GPS
+  // voix féminines et masculines avec nuances (les voix Google se reconnaissent à leur nom)
+  function nuances(v){
+    const fr=(v&&v.voices)||[],isM=x=>/x-(frb|frd|cab|cad)-/.test(x.id),M=fr.filter(isM),F=fr.filter(x=>!isM(x));
+    const f0=F[0]?F[0].id:'',f1=(F[1]||F[0]||{}).id||'',m0=M[0]?M[0].id:'',m1=(M[1]||M[0]||{}).id||'';
+    const lowM=M.length?1:.72;   // sans voix masculine, on grave la voix par défaut
+    return [
+      {id:'f-douce',g:'f',n:'Douce',v:f0,p:1.05,r:.95},{id:'f-claire',g:'f',n:'Claire',v:f1,p:1.15,r:1},{id:'f-grave',g:'f',n:'Grave',v:f0,p:.9,r:1},
+      {id:'m-grave',g:'m',n:'Grave',v:m0,p:.85*lowM,r:.95},{id:'m-posee',g:'m',n:'Posée',v:m1,p:1*lowM,r:.92},{id:'m-jeune',g:'m',n:'Jeune',v:m0,p:1.12*lowM,r:1.05}
+    ];
+  }
+  window.__nuances=nuances;
+  // applique le timbre (nuance de voix × personnage × vitesse) : vaut aussi pour le GPS
   function applyStyle(){
     const N=window.PoloNative;if(!N||!N.setTtsStyle)return;
-    const p=persona();let voice=ld('polo-tts-voice','');
-    if(p.accent){let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){}if(!v.ready)return;voice=(v.accents||{})[p.accent]||''}
-    N.setTtsStyle(voice,p.r*(+ld('polo-tts-speed','1')||1),p.p);
+    let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){}if(!v.ready)return;
+    const p=persona(),ns=nuances(v),nu=ns.find(x=>x.id===ld('polo-tts-voice','f-douce'))||ns[0];
+    const voice=p.accent?((v.accents||{})[p.accent]||''):nu.v;
+    N.setTtsStyle(voice,p.r*(p.accent?1:nu.r)*(+ld('polo-tts-speed','1')||1),p.p*(p.accent?1:nu.p));
   }
   window.__PERSONAS=PERSONAS;window.__persona=persona;window.__applyStyle=applyStyle;
   const endDot=s=>s.trim().replace(/[.!?…]*$/,m=>m||'.');
@@ -2374,14 +2446,14 @@ boot();
     const cur=lget('polo-tts-persona','classique'),base=lget('polo-tts-voice',''),speed=lget('polo-tts-speed','1');
     const sig=JSON.stringify([v,cur,base,speed]);if(ui.dataset.sig===sig)return;ui.dataset.sig=sig;
     const acc=v.accents||{},list=PS.filter(p=>!p.accent||acc[p.accent]),P=list.find(p=>p.id===cur)||list[0];
-    ui.querySelector('[data-ttsgrid]').innerHTML=list.map(p=>{const on=p.id===P.id;return `<button data-tp="${p.id}" style="border:0;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;font-family:system-ui,sans-serif;transition:transform .15s;${on?'background:linear-gradient(135deg,var(--aE8A87C,#E8A87C),var(--aC0603F,#C0603F));color:#fff;box-shadow:0 6px 16px rgba(var(--rgbacc,192,96,63),.4);transform:scale(1.03)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">
+    ui.querySelector('[data-ttsgrid]').innerHTML=list.map((p,i)=>{const on=p.id===P.id;return (p.g&&(i===0||list[i-1].g!==p.g)?`<div style="grid-column:1/-1;margin-top:${i?8:0}px;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--c6B665E,#6B665E)">${p.g==='Métiers'?'🧑‍💼 ':p.g==='Farfelus'?'🎭 ':'🌍 '}${p.g}</div>`:'')+`<button data-tp="${p.id}" style="border:0;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;font-family:system-ui,sans-serif;transition:transform .15s;${on?'background:linear-gradient(135deg,var(--aE8A87C,#E8A87C),var(--aC0603F,#C0603F));color:#fff;box-shadow:0 6px 16px rgba(var(--rgbacc,192,96,63),.4);transform:scale(1.03)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">
       <span style="flex:none;width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;font-size:24px;background:${on?'rgba(255,255,255,.25)':'var(--cFBF9F5,#FBF9F5)'}">${p.e}</span>
       <span style="min-width:0"><b style="display:block;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.n}</b><small style="display:block;font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.t}</small></span></button>`}).join('');
     const chip=(lab,on,attr)=>`<button ${attr} style="border:0;cursor:pointer;font:600 15px system-ui,sans-serif;padding:9px 16px;border-radius:18px;${on?'background:var(--aC0603F,#C0603F);color:#fff;box-shadow:0 4px 12px rgba(var(--rgbacc,192,96,63),.35)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">${lab}</button>`;
-    const voices=v.voices||[];
     ui.querySelector('[data-ttsbase]').style.display=P.accent?'none':'';
-    ui.querySelector('[data-ttsbox]').innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':
-      chip('Par défaut',!base||!voices.some(x=>x.id===base),'data-tv=""')+voices.map(x=>chip(x.label,x.id===base,`data-tv="${x.id.replace(/"/g,'&quot;')}"`)).join('');
+    const ns=window.__nuances(v),curN=(ns.find(x=>x.id===base)||ns[0]).id;
+    const line=(g,lab)=>`<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span style="width:118px;flex:none;font-size:15px;font-weight:700">${lab}</span>${ns.filter(x=>x.g===g).map(x=>chip(x.n,x.id===curN,`data-tv="${x.id}"`)).join('')}</div>`;
+    ui.querySelector('[data-ttsbox]').innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':line('f','👩 Féminines')+line('m','👨 Masculines');
     ui.querySelector('[data-ttsrate]').innerHTML=[['Lente','0.8'],['Normale','1'],['Rapide','1.2']].map(([l,x])=>chip('⏱ '+l,speed===x,`data-tr="${x}"`)).join('');
     const demo=()=>{const p=window.__persona();window.__applyStyle();speakOut(p.e+' '+p.n,p.demo);ui.dataset.sig=''};
     ui.querySelectorAll('[data-tp]').forEach(b=>b.onclick=()=>{lset('polo-tts-persona',b.dataset.tp);demo();fillTts(ui)});
