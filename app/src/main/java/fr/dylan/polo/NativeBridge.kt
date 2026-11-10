@@ -123,6 +123,63 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         }, delayMs.toLong().coerceIn(0, 15_000))
     }
 
+    // ---------- cerveau de l'assistant : Gemini (niveau gratuit) ----------
+    // La clé reste sur l'appareil (préférences privées de l'appli), jamais dans le code ni sur GitHub.
+
+    @JavascriptInterface
+    fun aiStatus(): String = JSONObject().put("key", !MainActivity.prefs(act).getString("aiKey", null).isNullOrEmpty()).toString()
+
+    /** Colle la clé copiée (depuis aistudio.google.com ouvert dans Chrome). Renvoie "ok", "empty" ou "invalid". */
+    @JavascriptInterface
+    fun aiPasteKey(): String {
+        val cm = act.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val raw = try { cm.primaryClip?.getItemAt(0)?.coerceToText(act)?.toString() } catch (e: Exception) { null }
+        val k = raw?.trim()?.replace(Regex("\\s"), "") ?: return "empty"
+        if (k.isEmpty()) return "empty"
+        if (!Regex("^[A-Za-z0-9_\\-]{30,60}$").matches(k)) return "invalid"
+        MainActivity.prefs(act).edit().putString("aiKey", k).apply()
+        return "ok"
+    }
+
+    @JavascriptInterface
+    fun aiClearKey() { MainActivity.prefs(act).edit().remove("aiKey").apply() }
+
+    /**
+     * Envoie une requête generateContent à Gemini (corps JSON préparé par la page).
+     * Réponse en évènement « ai » : {id, ok, status, body} ou {id, ok:false, error}.
+     */
+    @JavascriptInterface
+    fun aiAsk(body: String, id: String) {
+        val key = MainActivity.prefs(act).getString("aiKey", null)
+        if (key.isNullOrEmpty()) { emit("ai", JSONObject().put("id", id).put("ok", false).put("error", "nokey").toString()); return }
+        Thread({
+            // alias toujours à jour vers le modèle Flash-Lite gratuit, puis Flash en secours
+            val models = listOf("gemini-flash-lite-latest", "gemini-flash-latest")
+            var out = JSONObject().put("id", id).put("ok", false).put("error", "network")
+            for (model in models) {
+                try {
+                    val c = java.net.URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+                        .openConnection() as java.net.HttpURLConnection
+                    c.requestMethod = "POST"
+                    c.connectTimeout = 8000
+                    c.readTimeout = 20000
+                    c.doOutput = true
+                    c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                    c.setRequestProperty("x-goog-api-key", key)
+                    c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                    val code = c.responseCode
+                    val txt = (if (code in 200..299) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
+                    c.disconnect()
+                    out = JSONObject().put("id", id).put("ok", code in 200..299).put("status", code).put("body", txt)
+                    if (code != 404) break     // 404 : modèle indisponible → on essaie le suivant
+                } catch (e: Exception) {
+                    out = JSONObject().put("id", id).put("ok", false).put("error", "network")
+                }
+            }
+            emit("ai", out.toString())
+        }, "polo-ai").start()
+    }
+
     /** Ouvre une adresse dans le navigateur (connexion Spotify). */
     @JavascriptInterface
     fun openUrl(url: String) {

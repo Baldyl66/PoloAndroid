@@ -1567,7 +1567,7 @@ const crd=(t,k,inner,st)=>`<div style="background:var(--cFBF9F5,#FBF9F5);border-
       <div style="display:flex;gap:14px">
         ${[['1','Associe le téléphone','Dans les réglages Bluetooth de l’autoradio'],['2','Autorise le partage','Contacts et journal d’appels sur le téléphone'],['3','C’est prêt','Tout apparaît ici automatiquement']].map(x=>`<div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;padding:16px 18px;box-shadow:0 2px 10px rgba(43,42,40,.06)"><span style="display:inline-flex;width:30px;height:30px;border-radius:15px;background:#2F7FD8;color:#fff;font-weight:800;align-items:center;justify-content:center">${x[0]}</span><div style="font-weight:700;font-size:17px;margin-top:10px">${x[1]}</div><div class="m" style="font-size:14px;margin-top:4px;line-height:1.35">${x[2]}</div></div>`).join('')}
       </div>`,
-    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+swr('voice','Saluer au démarrage','Bonjour, anniversaires, trajet habituel ou musique',load('polo-greet')!=='0')+swr('voice','Réveil en disant « Polo »','Dis « Polo » pour parler à l’assistant, sans toucher l’écran',!!(window.PoloNative&&PoloNative.getWake&&PoloNative.getWake()))+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche une voix pour l’entendre</small></span></div><div data-ttsui><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix</div><div data-ttsbox style="margin-top:8px"></div></div></div></div>`)}`,
+    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+swr('voice','Saluer au démarrage','Bonjour, anniversaires, trajet habituel ou musique',load('polo-greet')!=='0')+swr('voice','Réveil en disant « Polo »','Dis « Polo » pour parler à l’assistant, sans toucher l’écran',!!(window.PoloNative&&PoloNative.getWake&&PoloNative.getWake()))+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche une voix pour l’entendre</small></span></div><div data-ttsui><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix</div><div data-ttsbox style="margin-top:8px"></div></div></div><div data-aiui style="margin-top:20px;padding-top:16px;border-top:1px solid var(--cECE6DA,#ECE6DA)"></div></div>`)}`,
     'Navigation':`<div style="display:flex;gap:16px;align-items:stretch"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">${crd('Lieux favoris','pin','<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><div class="place" data-place="Maison"></div><div class="place" data-place="Travail"></div></div>')}${crd('Musique pendant les annonces','music','<div style="display:flex;gap:10px;margin-top:8px"><button class="g gm" data-gm="duck" style="height:52px;font-size:17px">Baisser</button><button class="g gm" data-gm="pause" style="height:52px;font-size:17px">Pause</button></div>')}</div><div style="flex:1;min-width:0">${crd('Guidage','nav',swr('nav','Guidage vocal','Annonces « tournez à droite… »',load('polo-navvoice')!=='0')+swr('toll','Éviter les péages','',load('polo-avoid-toll')==='1')+swr('road','Éviter les autoroutes','',load('polo-avoid-motorway')==='1')+swr('tilt','Vue inclinée','',true)+swr('b3d','Bâtiments en 3D','',false,true),'height:100%;box-sizing:border-box')}</div></div>`,
     'À propos':`<span data-name style="display:none"></span><div style="display:flex;gap:14px"><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Véhicule</div><div style="font-size:18px;font-weight:700;margin-top:2px">Volkswagen Polo</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Application</div><div style="font-size:18px;font-weight:700;margin-top:2px">Polo Radio 1.1</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Écran</div><div style="font-size:18px;font-weight:700;margin-top:2px" data-screen></div></div></div><div style="display:flex;gap:14px"><button class="pbtn" data-os="apps" style="flex:1">Autorisations de l’application</button><button class="pbtn" data-crashlog style="flex:1">Journal d’erreurs</button></div>`,
   };
@@ -1709,6 +1709,7 @@ if(NATIVE){
   window.PoloNativeEvent=(type,data)=>{
     if(type==='media')applyMedia(data);
     if(type==='loc'&&window.__poloLoc)window.__poloLoc(data);
+    if(type==='ai'&&window.__ai)window.__ai(data);
     if(type==='spotifyAuth'&&window.__spAuth)window.__spAuth(data.url);if(type==='call'&&window.__call)window.__call(data);if(type==='sms'&&window.__sms)window.__sms(data);if(type==='wake'&&window.__assistant)window.__assistant(true);if(type==='phoneinfo'&&window.__phoneInfo)window.__phoneInfo();if(type==='smsresult'&&window.__smsResult)window.__smsResult(data);if((type==='notif'||type==='link')&&window.__notif)window.__notif(type==='notif'?data:{type:'link'});
     if(type==='speech'&&window.__speech)window.__speech(data);
     if(type==='tts'&&window.__tts)window.__tts(data);
@@ -2678,7 +2679,69 @@ async function playMusic(raw){
   setInterval(()=>save('polo-was-playing',playing?'1':'0'),30e3);
   window.__greet=greet;setTimeout(greet,6500);
   const SCREENS={meteo:'meteo',musique:'musique',notifications:'messages',messages:'messages',reglages:'reglages',parametres:'reglages',contacts:'contacts',telephone:'clavier',clavier:'clavier'};
-  function handle(raw){
+   /* ---------- cerveau : Gemini (gratuit), seulement quand les règles ne comprennent pas ----------
+      L'IA répond en une ou deux phrases, ou reformule la demande en une commande que l'appli connaît déjà. */
+   const AI={hist:[],seq:0,pending:null};
+   function aiContext(){
+     const d=new Date(),o=mem();
+     const facts=Object.entries(o.facts).map(([k,v])=>k+' : '+v).concat(o.notes.slice(-8)).join(' ; ');
+     let song='';try{if(media&&media.active&&media.title)song='Musique en cours : '+media.title+(media.artist?' de '+media.artist:'')+'.'}catch(e){}
+     let route='';try{if(routeActive&&destName)route='Itinéraire en cours vers '+destName+'.'}catch(e){}
+     return `Tu es Polo, l'assistant vocal intégré à l'autoradio de la Volkswagen Polo de ${myName()||'ton conducteur'}. `+
+      `Tu parles français, tu tutoies, tu es chaleureux, vif et un peu drôle, comme un copain qui connaît bien la voiture. `+
+      `Tes réponses sont lues à voix haute pendant que la personne conduit : une ou deux phrases courtes et naturelles, `+
+      `sans liste, sans markdown, sans émoji, sans URL. Ne pose qu'une question à la fois. `+
+      `Nous sommes le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}, il est ${hh(d)}. ${route} ${song} `+
+      (facts?`Ce que tu sais de lui : ${facts}. `:'')+
+      `Pour agir sur la voiture, appelle la fonction « commande » avec UNE phrase simple de cette liste : `+
+      `« emmène-moi à <adresse ou lieu> », « trouve <type de lieu> » (restaurant, station essence, McDonald's…), « arrête la navigation », « à quelle heure j'arrive », `+
+      `« mets <titre> de <artiste> », « mets du <artiste> », « mets la playlist <nom> », « mets l'album <nom> de <artiste> », « mets la musique », « pause », « chanson suivante », « chanson précédente », `+
+      `« volume à <0-100> », « monte le son », « baisse le son », « appelle <contact> », « dis à <contact> que <texte> », « envoie un message à <contact> », « lis mes messages », `+
+      `« quel temps fait-il », « il va pleuvoir », « quelle heure est-il », « ouvre <musique|météo|messages|réglages|contacts|téléphone> », « retiens que <fait> ». `+
+      `Si la demande est vague (« une musique calme », « j'ai faim »), choisis toi-même quelque chose de concret. `+
+      `Pour une question ou une discussion, réponds simplement sans appeler de fonction. Si tu ne sais pas, dis-le franchement.`;
+   }
+   function askAI(t){
+     const N=window.PoloNative;if(!N||!N.aiAsk||!N.aiStatus)return false;
+     let st={};try{st=JSON.parse(N.aiStatus())}catch(e){}
+     if(!st.key)return false;
+     const id='q'+(++AI.seq);
+     const contents=AI.hist.slice(-12).concat([{role:'user',parts:[{text:t}]}]);
+     const body={systemInstruction:{parts:[{text:aiContext()}]},contents,
+       tools:[{functionDeclarations:[{name:'commande',description:'Exécute une action dans l’autoradio (GPS, musique, appels, messages, météo, écrans, mémoire).',
+         parameters:{type:'OBJECT',properties:{phrase:{type:'STRING',description:'La commande, en français, sous une des formes autorisées.'}},required:['phrase']}}]}],
+       generationConfig:{temperature:0.8,maxOutputTokens:220}};
+     const timer=setTimeout(()=>{if(AI.pending===id){AI.pending=null;reply('Je n’arrive pas à joindre mon cerveau en ligne. Vérifie la connexion Internet.')}},22000);
+     AI.pending=id;
+     window.__ai=r=>{
+       if(!r||r.id!==AI.pending)return;AI.pending=null;clearTimeout(timer);
+       if(!r.ok){
+         const s=r.status||0;
+         if(r.error==='network')return reply('Je n’ai pas Internet pour réfléchir. Active le partage de connexion du téléphone.');
+         if(s===429)return reply('J’ai atteint ma limite gratuite pour le moment. Réessaie dans une minute.');
+         if(s===400||s===401||s===403)return reply('Ma clé Gemini ne marche pas. Recolle-la dans Réglages, Alertes, Intelligence.');
+         return reply('Mon cerveau en ligne ne répond pas. Réessaie dans un instant.');
+       }
+       let j={};try{j=JSON.parse(r.body)}catch(e){}
+       const parts=(((j.candidates||[])[0]||{}).content||{}).parts||[];
+       const call=parts.find(p=>p.functionCall&&p.functionCall.name==='commande');
+       const text=parts.filter(p=>p.text).map(p=>p.text).join(' ').replace(/[*_#`>]/g,'').replace(/\s+/g,' ').trim();
+       AI.hist.push({role:'user',parts:[{text:t}]});
+       if(call&&call.functionCall.args&&call.functionCall.args.phrase){
+         const ph=String(call.functionCall.args.phrase).replace(/^[«"\s]+|[»"\s]+$/g,'');
+         AI.hist.push({role:'model',parts:[{text:(text?text+' ':'')+'(commande : '+ph+')'}]});
+         handle(ph,true);return;
+       }
+       if(!text)return reply('Je n’ai pas compris. Tu peux reformuler ?');
+       AI.hist.push({role:'model',parts:[{text}]});
+       if(AI.hist.length>24)AI.hist.splice(0,AI.hist.length-24);
+       reply(text);
+     };
+     try{N.aiAsk(JSON.stringify(body),id)}catch(e){clearTimeout(timer);AI.pending=null;return false}
+     return true;
+   }
+   window.__aiReset=()=>{AI.hist=[]};
+  function handle(raw,fromAI){
     const t=raw.trim(),n=norm(t);let m;
     if(memoryCmd(t,n)||phoneCmd(n))return;
     if(/^(quelle heure|il est quelle heure|l heure)/.test(n))return reply('Il est '+hh(new Date())+'.');
@@ -2707,6 +2770,7 @@ async function playMusic(raw){
        &&!/^(le |la |l )?(volume|son|navigation|gps|guidage|radio|minuteur)\b/i.test(m[1])&&!/^(?:la |une |de la )?musique$/i.test(m[1]))return playMusic(m[1]);
     if(/(que sais tu faire|qu est ce que tu sais faire|aide moi|^aide$)/.test(n))
       return reply('Tu peux me dire par exemple : emmène-moi à la maison, quel temps fait-il, qu’est-ce que j’ai aujourd’hui, c’est l’anniversaire de qui, appelle Paul, lis mes messages, mets Bohemian Rhapsody de Queen, joue ma playlist Chill, ou retiens que ma couleur préférée est le bleu.');
+    if(!fromAI&&askAI(t))return;
     reply('Je n’ai pas compris. Dis par exemple : emmène-moi à la maison, ou quel temps fait-il.');
   }
   // par le bouton, ou en disant « Polo » (petit son, puis écoute)
@@ -2755,7 +2819,24 @@ async function playMusic(raw){
     ui.querySelector('[data-ttsbox]').innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':line('f','Féminines')+line('m','Masculines')+line('j','Japonais');
     ui.querySelectorAll('[data-tv]').forEach(b=>b.onclick=()=>{lset('polo-tts-voice',b.dataset.tv);window.__applyStyle();speakOut('Assistant',window.__persona().demo);ui.dataset.sig='';fillTts(ui)});
   }
-  function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsui]').forEach(u=>{if(u.getClientRects().length)fillTts(u)})})}
+  // intelligence de l'assistant : clé Gemini gratuite, collée depuis Chrome sur l'autoradio
+  function fillAi(ui){
+    const N=window.PoloNative;if(!N||!N.aiStatus)return;
+    let st={};try{st=JSON.parse(N.aiStatus())}catch(e){}
+    const sig=String(!!st.key)+(ui.dataset.msg||'');if(ui.dataset.sig===sig)return;ui.dataset.sig=sig;
+    const b=(lab,attr,main)=>`<button ${attr} style="border:0;cursor:pointer;font:600 15px system-ui,sans-serif;padding:10px 16px;border-radius:18px;${main?'background:var(--aC0603F,#C0603F);color:#fff':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">${lab}</button>`;
+    ui.innerHTML=`<div style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:5px;flex:none;background:${st.key?'#2E9D5B':'#B8B0A2'}"></span>`+
+      `<b style="font-size:17px">Intelligence</b><small class="m" style="font-size:14px">${st.key?'Activée : Polo comprend tout et te répond':'Polo comprend seulement les commandes prévues'}</small></div>`+
+      `<small class="m" style="display:block;font-size:14px;margin-top:6px;line-height:1.4">${st.key?'Gratuit avec Gemini (Google), utilise Internet seulement quand il ne connaît pas la commande.':'1. Crée une clé gratuite (compte Google) et touche « Copier ». 2. Reviens ici et touche « Coller la clé ».'}</small>`+
+      (ui.dataset.msg?`<div style="margin-top:8px;font-weight:700;font-size:15px">${ui.dataset.msg}</div>`:'')+
+      `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${st.key?b('Retirer la clé','data-aiclr'):b('Créer une clé gratuite','data-ainew',true)}${b(st.key?'Remplacer la clé':'Coller la clé','data-aipaste',!!0)}</div>`;
+    const q=x=>ui.querySelector(x);
+    if(q('[data-ainew]'))q('[data-ainew]').onclick=()=>{if(N.openUrl)N.openUrl('https://aistudio.google.com/apikey')};
+    if(q('[data-aiclr]'))q('[data-aiclr]').onclick=()=>{N.aiClearKey();ui.dataset.msg='Clé retirée.';ui.dataset.sig='';fillAi(ui)};
+    q('[data-aipaste]').onclick=()=>{const r=N.aiPasteKey();ui.dataset.msg=r==='ok'?'✓ Clé enregistrée. Dis « Polo » et pose-lui une question !':r==='empty'?'Rien à coller : copie d’abord la clé sur la page Google.':'Ce qui est copié n’est pas une clé Gemini.';
+      if(r==='ok'&&window.__aiReset)window.__aiReset();ui.dataset.sig='';fillAi(ui)};
+  }
+  function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsui]').forEach(u=>{if(u.getClientRects().length)fillTts(u)});r.querySelectorAll('[data-aiui]').forEach(u=>{if(u.getClientRects().length)fillAi(u)})})}
   if(window.PoloNative&&window.PoloNative.ttsVoices)setInterval(()=>{if(!document.hidden)updTts()},1000);
   function phoneRow(row){
     let lk={};try{lk=JSON.parse(window.PoloNative.phoneLink())}catch(e){return ''}
