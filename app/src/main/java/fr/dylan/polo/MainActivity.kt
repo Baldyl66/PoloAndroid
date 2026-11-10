@@ -92,6 +92,8 @@ class MainActivity : Activity() {
         startSpotifyCallbackServer()
         MediaHub.init(this) { json -> bridge.emit("media", json) }
         PhoneHub.init(this) { type, json -> bridge.emit(type, json) }
+        LocationHub.init { type, json -> bridge.emit(type, json) }
+        LocationHub.start(this)
         CompanionLink.init(this) { type, json -> bridge.emit(type, json) }
         bridge.startWake()
 
@@ -239,6 +241,7 @@ class MainActivity : Activity() {
             cb.invoke(origin, hasPerm(Manifest.permission.ACCESS_FINE_LOCATION), true)
             pendingGeo = null
         }
+        LocationHub.start(this)
         bridge.startWake()
         bridge.emit("permissions", bridge.permissionsJson())
     }

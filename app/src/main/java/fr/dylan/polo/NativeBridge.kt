@@ -99,6 +99,7 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     // ---------- appels et messages ----------
 
+    @JavascriptInterface fun lastLocation(): String = LocationHub.last ?: ""
     @JavascriptInterface fun answerCall(): Boolean = PhoneHub.answer()
     @JavascriptInterface fun hangupCall(): Boolean = PhoneHub.hangup()
     @JavascriptInterface fun messages(): String = PhoneHub.conversationsJson()

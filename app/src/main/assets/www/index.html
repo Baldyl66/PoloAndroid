@@ -145,6 +145,30 @@ body{background:var(--bg);overflow:hidden;font-family:system-ui,-apple-system,"S
   </div>
 </div>
 
+<script>
+/* Position : GPS natif d'Android (LocationHub) en priorité, géolocalisation du WebView en secours. */
+(function(){
+  const N=window.PoloNative;if(!N||!N.lastLocation||!navigator.geolocation)return;
+  const orig=navigator.geolocation,oWatch=orig.watchPosition.bind(orig),oGet=orig.getCurrentPosition.bind(orig),oClear=orig.clearWatch.bind(orig);
+  const watchers=new Map();let nid=1,last=null,lastNativeAt=0;const t0=Date.now();
+  const mk=d=>({coords:{latitude:d.lat,longitude:d.lon,accuracy:d.acc,speed:d.spd,heading:d.hd,altitude:d.alt,altitudeAccuracy:null},timestamp:d.t||Date.now()});
+  const deliver=p=>{last=p;watchers.forEach(w=>{try{w.ok(p)}catch(e){}})};
+  window.__poloLoc=d=>{if(!d||d.lat==null)return;lastNativeAt=Date.now();deliver(mk(d))};
+  try{const s=N.lastLocation();if(s)window.__poloLoc(JSON.parse(s))}catch(e){}
+  const api={
+    watchPosition(ok,err,opt){const id=nid++,w={ok,err};watchers.set(id,w);
+      if(last)setTimeout(()=>ok(last),0);
+      // secours : le WebView ne sert que tant que le GPS natif est muet
+      try{w.sys=oWatch(p=>{if(Date.now()-lastNativeAt>5000)deliver(p)},e=>{if(!last&&Date.now()-t0>25000&&err)err(e)},opt)}catch(e){}
+      setTimeout(()=>{if(!last&&err&&watchers.has(id))err({code:3,message:'timeout'})},30000);
+      return id},
+    clearWatch(id){const w=watchers.get(id);if(w&&w.sys!=null)try{oClear(w.sys)}catch(e){}watchers.delete(id)},
+    getCurrentPosition(ok,err,opt){if(last&&Date.now()-last.timestamp<60000){setTimeout(()=>ok(last),0);return}
+      const id=api.watchPosition(p=>{api.clearWatch(id);ok(p)},e=>{api.clearWatch(id);err&&err(e)},opt)}
+  };
+  try{Object.defineProperty(navigator,'geolocation',{value:api,configurable:true})}catch(e){}
+})();
+</script>
 <script>/**
  * MapLibre GL JS
  * @license 3-Clause BSD. Full text of license: https://github.com/maplibre/maplibre-gl-js/blob/v4.7.1/LICENSE.txt
@@ -1684,6 +1708,7 @@ if(NATIVE){
   }
   window.PoloNativeEvent=(type,data)=>{
     if(type==='media')applyMedia(data);
+    if(type==='loc'&&window.__poloLoc)window.__poloLoc(data);
     if(type==='spotifyAuth'&&window.__spAuth)window.__spAuth(data.url);if(type==='call'&&window.__call)window.__call(data);if(type==='sms'&&window.__sms)window.__sms(data);if(type==='wake'&&window.__assistant)window.__assistant(true);if(type==='phoneinfo'&&window.__phoneInfo)window.__phoneInfo();if(type==='smsresult'&&window.__smsResult)window.__smsResult(data);if((type==='notif'||type==='link')&&window.__notif)window.__notif(type==='notif'?data:{type:'link'});
     if(type==='speech'&&window.__speech)window.__speech(data);
     if(type==='tts'&&window.__tts)window.__tts(data);
