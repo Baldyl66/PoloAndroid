@@ -91,6 +91,9 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
     @JavascriptInterface
     fun playFromSearch(query: String, pkg: String): Boolean {
         val pkgs = if (pkg.isNotEmpty()) listOf(pkg) else listOf("com.spotify.music", "com.google.android.apps.youtube.music")
+        // 1) appli déjà ouverte : on lui passe la recherche en arrière-plan, l'écran ne change pas
+        if (MediaHub.playFromSearch(act, query, pkgs) != null) return true
+        // 2) sinon on la démarre avec la recherche, puis Polo Radio revient devant
         val target = pkgs.firstOrNull { act.packageManager.getLaunchIntentForPackage(it) != null } ?: return false
         val i = Intent(android.provider.MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
             .setPackage(target)
@@ -102,7 +105,22 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
                 try { act.startActivity(i.setPackage(null)) } catch (x: Exception) {}
             }
         }
+        bringToFront(3500)
         return true
+    }
+
+    /**
+     * Ramène Polo Radio au premier plan après un délai (le temps que l'appli de musique démarre la lecture).
+     * Android l'autorise grâce à « Afficher par-dessus les autres applis » (déjà demandé pour le démarrage auto).
+     */
+    @JavascriptInterface
+    fun bringToFront(delayMs: Int) {
+        main.postDelayed({
+            try {
+                act.startActivity(Intent(act, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+            } catch (e: Exception) {}
+        }, delayMs.toLong().coerceIn(0, 15_000))
     }
 
     /** Ouvre une adresse dans le navigateur (connexion Spotify). */

@@ -1890,7 +1890,7 @@ async function spPlay(body){
   const d=await api('/me/player/devices').catch(()=>null);const list=(d&&d.devices)||[];
   const pick=list.find(x=>x.is_active)||list.find(x=>/automobile|car/i.test(x.type))||list[0];
   if(pick){SP.deviceId=pick.id;$s('#spDevName').textContent=pick.name;try{await api('/me/player/play?device_id='+pick.id,{method:'PUT',body});setTimeout(()=>spPoll(true),800)}catch(err){}return}
-  if(NAT&&NAT.openApp&&NAT.openApp('com.spotify.music')){setTimeout(()=>spPlay(body),4000);return}
+  if(NAT&&NAT.openApp&&NAT.openApp('com.spotify.music')){setTimeout(()=>spPlay(body),4000);if(NAT.bringToFront)NAT.bringToFront(5500);return}
   spMsg('Aucun appareil Spotify','Ouvre Spotify sur ton téléphone ou sur l’autoradio, puis réessaie.');
 }
 

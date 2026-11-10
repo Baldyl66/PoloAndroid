@@ -142,6 +142,25 @@ object MediaHub {
 
     fun isPlaying(): Boolean = controller?.playbackState?.state == PlaybackState.STATE_PLAYING
 
+    /**
+     * Lance une recherche dans une appli de musique déjà ouverte (en arrière-plan), sans l'afficher :
+     * même mécanisme qu'Android Auto / l'Assistant. Renvoie le paquet utilisé, ou null si aucune session.
+     */
+    fun playFromSearch(ctx: Context, query: String, pkgs: List<String>): String? {
+        val c = ctx.applicationContext
+        if (!hasAccess(c)) return null
+        return try {
+            val m = msm ?: (c.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager).also { msm = it }
+            val sessions = m.getActiveSessions(ComponentName(c, MediaListener::class.java))
+            val target = pkgs.firstNotNullOfOrNull { p -> sessions.firstOrNull { it.packageName == p } } ?: return null
+            val actions = target.playbackState?.actions ?: 0L
+            // l'appli doit annoncer qu'elle sait jouer une recherche (sinon on passera par l'ouverture)
+            if (target.playbackState != null && actions and PlaybackState.ACTION_PLAY_FROM_SEARCH == 0L) return null
+            main.post { try { target.transportControls.playFromSearch(query, android.os.Bundle()) } catch (e: Exception) {} }
+            target.packageName
+        } catch (e: Exception) { null }
+    }
+
     fun play() = main.post { controller?.transportControls?.play() }
     fun pause() = main.post { controller?.transportControls?.pause() }
     fun next() = main.post { controller?.transportControls?.skipToNext() }
