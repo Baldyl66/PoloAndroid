@@ -2489,35 +2489,50 @@ boot();
     return 0;
   }
 
-  // au démarrage : salutation, anniversaires et rendez-vous du jour, puis une seule proposition
+  // au démarrage : une phrase par sujet (salutation, rendez-vous, anniversaires), puis une seule question à la fin
   let greeted=false;
+  // dit les phrases l'une après l'autre, avec une courte pause entre chacune
+  function sayAll(list,cb){const s=list.filter(Boolean);const next=i=>{if(i>=s.length){if(cb)cb();return}say('Assistant',s[i],()=>next(i+1))};next(0)}
+  const bdayTxt=list=>list.length===1
+    ?(list[0].y>1900?list[0].who+' fête ses '+(new Date().getFullYear()-list[0].y)+' ans aujourd’hui.':'C’est l’anniversaire de '+list[0].who+' aujourd’hui.')
+    :'C’est l’anniversaire de '+listTxt(list.slice(0,3).map(x=>x.who))+' aujourd’hui.';
+  // une phrase pour ce qui dure toute la journée, une autre pour les rendez-vous à heure fixe
+  function eventsTxt(ev){
+    const day=ev.filter(e=>e.allDay),timed=ev.filter(e=>!e.allDay),out=[];
+    if(day.length)out.push('Aujourd’hui, c’est '+listTxt(day.slice(0,2).map(e=>e.title))+'.');
+    if(timed.length===1)out.push('Tu as un rendez-vous aujourd’hui : '+timed[0].title+', à '+hourTxt(timed[0].start)+'.');
+    else if(timed.length){const p=timed.slice(0,3).map(e=>e.title+' à '+hourTxt(e.start));
+      out.push('Tu as '+timed.length+' rendez-vous aujourd’hui : d’abord '+p[0]+(p.length>2?', ensuite '+p[1]+', et enfin '+p[2]:', puis '+p[1])+'.')}
+    return out;
+  }
   function greet(){
     if(load('polo-greet')==='0'||voiceOpen||/^appel/.test(current))return;
     greeted=true;
     const d=new Date(),hr=d.getHours(),nm=myName(),done=announced();
-    const hello=(hr>=5&&hr<12?'Bonjour':hr>=12&&hr<18?'Bon après-midi':'Bonsoir')+(nm?' '+nm:'');
     const today=allDates().filter(x=>x.d===d.getDate()&&x.m===d.getMonth()&&!done.includes(dateId(x)));
     const mine=today.find(x=>!x.who),others=today.filter(x=>x.who),other=others[0];
     const ev=dayEvents(0).filter(e=>!done.includes('e|'+e.title+'|'+e.start));
     // volume revenu à un niveau extrême : on remet le volume habituel
     const uv=+load('polo-usual-vol');
     if(N&&N.getVolume&&N.setVolume&&uv){const v=+N.getVolume('media');if(v<8||v>92){N.setVolume('media',uv);if(typeof syncVol==='function')syncVol(uv)}}
-    let txt=mine?'Joyeux anniversaire'+(nm?' '+nm:'')+' ! ':hello+'. ';
-    if(others.length)txt+='Aujourd’hui, c’est l’anniversaire de '+listTxt(others.map(x=>x.who+ageTxt(x)).slice(0,3))+'. ';
-    if(ev.length)txt+='Au programme aujourd’hui : '+listTxt(ev.slice(0,3).map(evTxt))+'. ';
     markAnn(today.map(dateId).concat(ev.map(e=>'e|'+e.title+'|'+e.start)));
-    // une seule question : appeler la personne fêtée, aller au rendez-vous proche, trajet habituel, ou musique
+    const lines=[
+      mine?'Joyeux anniversaire'+(nm?' '+nm:'')+' !':(hr>=5&&hr<12?'Bonjour':hr>=12&&hr<18?'Bon après-midi':'Bonsoir')+(nm?' '+nm:'')+'.',
+      ...eventsTxt(ev),
+      others.length?bdayTxt(others):''
+    ];
+    // une seule question, toujours en dernier : appeler la personne fêtée, aller au rendez-vous proche, trajet habituel, ou musique
     const soon=ev.find(e=>!e.allDay&&e.loc&&e.start-Date.now()<3*3600e3&&e.start>Date.now());
     let ask=null;
-    if(other)ask={q:'Tu veux appeler '+other.who.split(' ')[0]+' ?',go:()=>callName(other.who)};
-    else if(soon&&!routeActive)ask={q:'On va à ton rendez-vous ?',go:()=>goTo(soon.loc)};
+    if(other)ask={q:'Tu veux appeler '+other.who.split(' ')[0]+' pour lui souhaiter ?',go:()=>callName(other.who)};
+    else if(soon&&!routeActive)ask={q:'On y va maintenant ?',go:()=>goTo(soon.loc)};
     else{const trip=!routeActive?usualTrip():null;
       if(trip)ask={q:trip.name==='Maison'?'On rentre à la maison ?':trip.name==='Travail'?'On va au travail ?':'On va à '+trip.name+' ?',
         go:()=>{const p=savedPlace(trip.name);reply('C’est parti.');startRoute(trip.name,null,false,(p&&p.ll)||trip.ll)}};
       else if(!playing&&load('polo-was-playing')==='1')ask={q:'Je remets ta musique ?',go:()=>{if(!playing)togglePlay();reply('C’est parti.')}};
     }
-    if(!ask){reply(txt+'Bonne route !');return}
-    say('Assistant',txt+ask.q,()=>listen('Assistant',a=>{if(YES.test(a.trim()))ask.go();else reply('D’accord.')}));
+    if(!ask){sayAll(lines.concat('Bonne route !'));return}
+    sayAll(lines.concat(ask.q),()=>listen('Assistant',a=>{if(YES.test(a.trim()))ask.go();else reply('D’accord.')}));
   }
   // infos du téléphone arrivées après la salutation : on annonce ce qui est nouveau, et la batterie faible
   window.__phoneInfo=()=>{
@@ -2527,9 +2542,9 @@ boot();
     const b=phoneInfo().battery,lowKey='polo-lowbat';
     const low=b&&b.pct>=0&&b.pct<=15&&!b.charging&&Date.now()-(+load(lowKey)||0)>2*3600e3;
     if(others.length){markAnn(others.map(dateId));const o=others[0];
-      say('Assistant','Au fait, aujourd’hui c’est l’anniversaire de '+listTxt(others.map(x=>x.who+ageTxt(x)).slice(0,3))+'. Tu veux appeler '+o.who.split(' ')[0]+' ?',
+      sayAll([myName()?'Au fait, '+myName()+'.':'Au fait.',bdayTxt(others),'Tu veux appeler '+o.who.split(' ')[0]+' pour lui souhaiter ?'],
         ()=>listen('Assistant',a=>{if(YES.test(a.trim()))callName(o.who);else reply('D’accord.')}));return}
-    if(low){save(lowKey,String(Date.now()));reply('Ton téléphone n’a plus que '+b.pct+' % de batterie, pense à le brancher.')}
+    if(low){save(lowKey,String(Date.now()));sayAll(['Attention, ton téléphone n’a plus que '+b.pct+' % de batterie.','Pense à le brancher.'])}
   };
   setInterval(()=>save('polo-was-playing',playing?'1':'0'),30e3);
   window.__greet=greet;setTimeout(greet,6500);
