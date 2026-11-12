@@ -30,25 +30,6 @@ jobs:
           rm -rf app/src/main/assets/vosk-fr
           mv vosk-model-small-fr-0.22 app/src/main/assets/vosk-fr
 
-      - name: Voix naturelles françaises intégrées (Piper / sherpa-onnx, hors ligne)
-        run: |
-          mkdir -p app/libs
-          curl -fsSL -o app/libs/sherpa-onnx-1.13.8.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar
-          D=app/src/main/assets/tts-fr
-          rm -rf $D && mkdir -p $D/femme $D/homme
-          # voix choisies après mesure sur téléphone : siwis (féminine) et miro « high » (masculine,
-          # plus naturelle et 2× plus rapide que tom)
-          for pair in femme:siwis-medium homme:miro-high; do
-            g=${pair%%:*}; n=${pair##*:}
-            curl -fsSL https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-fr_FR-$n.tar.bz2 | tar xj
-            m=vits-piper-fr_FR-$n
-            mv $m/*.onnx $D/$g/model.onnx
-            mv $m/tokens.txt $D/$g/tokens.txt
-            [ -d $D/espeak-ng-data ] || mv $m/espeak-ng-data $D/espeak-ng-data
-            rm -rf $m
-          done
-          du -sh $D
-
       - name: Clé de signature (secret GitHub)
         env:
           KS: ${{ secrets.POLO_KEYSTORE_B64 }}

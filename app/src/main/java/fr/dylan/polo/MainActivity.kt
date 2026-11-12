@@ -94,8 +94,6 @@ class MainActivity : Activity() {
         PhoneHub.init(this) { type, json -> bridge.emit(type, json) }
         LocationHub.init { type, json -> bridge.emit(type, json) }
         LocationHub.start(this)
-        // voix naturelle intégrée : chargée dès le démarrage pour que la 1re phrase parte vite
-        if (NeuralTts.available(this)) NeuralTts.warmUp(this, prefs(this).getString("ttsVoice", null)?.removePrefix("neural:") ?: "femme")
         CompanionLink.init(this) { type, json -> bridge.emit(type, json) }
         bridge.startWake()
 

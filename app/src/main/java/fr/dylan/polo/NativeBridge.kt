@@ -485,23 +485,42 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     // ---------- assistant vocal : lecture à voix haute ----------
 
+    private val googleTts = "com.google.android.tts"
+    private val marmaladeTts = "app.marmalade.tts"
     private var tts: TextToSpeech? = null
+    private var ttsEngine: String? = null
     private var ttsReady = false
     private var pendingSpeech: String? = null
+    private var pendingNav = false
 
-    private fun ensureTts() {
-        if (tts != null) return
-        // moteur choisi dans Android (SherpaTTS, Marmalade… voix neuronales) ;
-        // Google seulement à la place d'un moteur basique (Pico, eSpeak, moteur du fabricant)
-        val google = "com.google.android.tts"
+    private fun installed(pkg: String) = try { act.packageManager.getPackageInfo(pkg, 0); true } catch (e: Exception) { false }
+
+    /**
+     * Moteur vocal autorisé : Marmalade s'il est choisi dans Android, sinon Google.
+     * Sans l'un des deux, l'appli reste muette (null).
+     */
+    private fun allowedEngine(): String? {
         val def = try { Settings.Secure.getString(act.contentResolver, "tts_default_synth") } catch (e: Exception) { null }
-        val basic = def.isNullOrEmpty() || listOf("pico", "svox", "espeak", "iflytek", "kdxf", "baidu").any { def.contains(it, true) }
-        val hasGoogle = basic && def != google && try { act.packageManager.getPackageInfo(google, 0); true } catch (e: Exception) { false }
+        return when {
+            def == marmaladeTts && installed(marmaladeTts) -> marmaladeTts
+            installed(googleTts) -> googleTts
+            else -> null
+        }
+    }
+
+    @JavascriptInterface
+    fun canSpeak(): Boolean = allowedEngine() != null
+
+    private fun ensureTts(engine: String) {
+        // moteur changé dans Android (Google ↔ Marmalade) : on repart sur le nouveau
+        if (tts != null && ttsEngine != engine) { tts?.shutdown(); tts = null; ttsReady = false }
+        if (tts != null) return
+        ttsEngine = engine
         val init = TextToSpeech.OnInitListener { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) {
+                // voix française par défaut du moteur, sans réglage
                 tts?.language = Locale.FRANCE
-                applyTtsPrefs()
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}
                     override fun onDone(utteranceId: String?) = ttsFinished(utteranceId)
@@ -510,80 +529,15 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
                 })
                 pendingSpeech?.let { speakNow(it, pendingNav) }
             } else {
+                // moteur en échec : on réessaiera à la prochaine phrase
+                tts?.shutdown()
+                tts = null
                 emit("tts", "{\"type\":\"done\"}")
             }
             pendingSpeech = null
         }
-        tts = if (hasGoogle) TextToSpeech(act, init, google) else TextToSpeech(act, init)
+        tts = TextToSpeech(act, init, engine)
     }
-
-    /** Meilleure voix française installée : qualité la plus haute, hors ligne, France d'abord. */
-    private fun bestFrenchVoice(): android.speech.tts.Voice? = try {
-        tts?.voices?.filter { it.locale.language == "fr" && !it.isNetworkConnectionRequired &&
-                !it.features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) }
-            ?.sortedWith(compareByDescending<android.speech.tts.Voice> { it.quality }
-                .thenBy { it.locale.country != "FR" }.thenBy { it.latency })
-            ?.firstOrNull()
-    } catch (e: Exception) { null }
-
-    /** Applique le timbre choisi (voix, vitesse, hauteur) : vaut pour les messages et pour le GPS. */
-    private fun applyTtsPrefs() {
-        val p = MainActivity.prefs(act)
-        val id = p.getString("ttsVoice", null)
-        try {
-            val v = if (id != null) tts?.voices?.firstOrNull { it.name == id } else null
-            val best = v ?: bestFrenchVoice()
-            if (best != null) tts?.voice = best else tts?.language = Locale.FRANCE
-        } catch (e: Exception) {
-        }
-        tts?.setSpeechRate(p.getFloat("ttsRate", 1f))
-        tts?.setPitch(p.getFloat("ttsPitch", 1f))
-    }
-
-    /** Voix installées : {"ready", "voices":[{id, label}] (françaises), "ja":[{id, label}] (japonaises)}. */
-    @JavascriptInterface
-    fun ttsVoices(): String {
-        main.post { ensureTts() }
-        val out = JSONObject().put("ready", ttsReady)
-        val arr = JSONArray()
-        val ja = JSONArray()
-        if (ttsReady) try {
-            val local = tts?.voices?.filter { !it.isNetworkConnectionRequired } ?: emptyList()
-            val fr = local.filter { it.locale.language == "fr" }
-                .sortedWith(compareBy({ it.locale.country != "FR" }, { it.name }))
-            val region = mapOf("FR" to "", "CA" to " · Québec", "BE" to " · Belgique", "CH" to " · Suisse")
-            fr.forEachIndexed { i, v ->
-                arr.put(JSONObject().put("id", v.name).put("label", "Voix ${i + 1}" + (region[v.locale.country] ?: " · ${v.locale.country}")))
-            }
-            local.filter { it.locale.language == "ja" }.sortedBy { it.name }.forEach { v ->
-                ja.put(JSONObject().put("id", v.name).put("label", v.name))
-            }
-        } catch (e: Exception) {
-        }
-        if (NeuralTts.available(act) && !neuralFailed) {
-            out.put("ready", true)
-            out.put("neural", JSONArray()
-                .put(JSONObject().put("id", "neural:femme").put("label", "Naturelle").put("g", "f"))
-                .put(JSONObject().put("id", "neural:homme").put("label", "Naturelle").put("g", "m")))
-        }
-        return out.put("voices", arr).put("ja", ja).toString()
-    }
-
-    /** Règle le timbre : voix ("" = française par défaut), vitesse et hauteur (1 = normal). */
-    @JavascriptInterface
-    fun setTtsStyle(voice: String, rate: Double, pitch: Double) {
-        MainActivity.prefs(act).edit()
-            .putString("ttsVoice", voice.ifEmpty { null })
-            .putFloat("ttsRate", rate.toFloat().coerceIn(0.4f, 2.5f))
-            .putFloat("ttsPitch", pitch.toFloat().coerceIn(0.25f, 2.5f))
-            .apply()
-        neuralVoice()?.let { NeuralTts.warmUp(act, it) }
-        main.post { ensureTts(); if (ttsReady) applyTtsPrefs() }
-    }
-
-    private var pendingNav = false
-    /** La voix intégrée a échoué sur cet appareil : on reste sur le moteur d'Android. */
-    @Volatile private var neuralFailed = false
 
     private fun ttsFinished(id: String?) {
         WakeWord.mutedUntil = android.os.SystemClock.elapsedRealtime() + 800
@@ -603,35 +557,13 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, if (nav) "nav" else "msg")
     }
 
-    /** Voix intégrée choisie ("femme"/"homme"), ou null pour le moteur vocal d'Android. */
-    private fun neuralVoice(): String? {
-        if (neuralFailed || !NeuralTts.available(act)) return null
-        val id = MainActivity.prefs(act).getString("ttsVoice", null)
-        return when {
-            id == null -> "femme"                       // par défaut : la voix naturelle intégrée
-            id.startsWith("neural:") -> id.removePrefix("neural:")
-            else -> null
-        }
-    }
-
     private fun speakAny(text: String, nav: Boolean) {
-        // pas de réveil « Polo » pendant que l'appli parle (levé à la fin de la phrase)
-        WakeWord.mutedUntil = android.os.SystemClock.elapsedRealtime() + 30_000
-        val nv = neuralVoice()
-        if (nv != null) {
-            main.post {
-                val mode = MainActivity.prefs(act).getString("guidanceMode", "pause") ?: "pause"
-                audioCoord.requestFocus(if (nav) mode else "pause", nav)
-                val usage = if (nav) AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE else AudioAttributes.USAGE_ASSISTANT
-                NeuralTts.speak(act, text, nv, MainActivity.prefs(act).getFloat("ttsRate", 1f), usage) { ok ->
-                    if (ok) ttsFinished(if (nav) "nav" else "msg")
-                    else main.post { neuralFailed = true; ensureTts(); if (ttsReady) speakNow(text, nav) else { pendingSpeech = text; pendingNav = nav } }
-                }
-            }
-            return
-        }
         main.post {
-            ensureTts()
+            // ni Marmalade ni Google : muet, l'interface affiche seulement la phrase
+            val engine = allowedEngine() ?: return@post
+            // pas de réveil « Polo » pendant que l'appli parle (levé à la fin de la phrase)
+            WakeWord.mutedUntil = android.os.SystemClock.elapsedRealtime() + 30_000
+            ensureTts(engine)
             if (ttsReady) speakNow(text, nav) else {
                 pendingSpeech = text
                 pendingNav = nav
@@ -680,7 +612,6 @@ class NativeBridge(private val act: MainActivity, private val web: WebView) {
 
     @JavascriptInterface
     fun stopSpeaking() {
-        NeuralTts.stop()
         main.post { tts?.stop() }
     }
 

@@ -878,7 +878,10 @@ function listen(label,onResult){
 function speakOut(label,text){
   voiceKind='speak';voiceOpenUI(label,'');vText.textContent=text;
   const end=()=>{if(voiceKind==='speak')vTimers.push(setTimeout(()=>closeVoice(true),500))};
-  if(window.PoloNative&&PoloNative.speak){window.__tts=e=>{if(e.type==='done'&&e.id!=='nav')end()};PoloNative.speak(text);return}
+  if(window.PoloNative&&PoloNative.speak){window.__tts=e=>{if(e.type==='done'&&e.id!=='nav')end()};
+    if(!PoloNative.canSpeak||PoloNative.canSpeak()){PoloNative.speak(text);return}
+    // sans voix Google : muet, le texte reste le temps de le lire puis la suite s'enchaîne
+    vTimers.push(setTimeout(()=>window.__tts&&window.__tts({type:'done',id:'msg'}),Math.max(2500,text.length*70)));return}
   if(window.speechSynthesis){try{ttsUtter=new SpeechSynthesisUtterance(text);ttsUtter.lang='fr-FR';ttsUtter.onend=end;ttsUtter.onerror=end;speechSynthesis.cancel();speechSynthesis.speak(ttsUtter);return}catch(e){}}
   vTimers.push(setTimeout(()=>closeVoice(true),Math.max(2500,text.length*70)));
 }
@@ -1570,7 +1573,7 @@ const crd=(t,k,inner,st)=>`<div style="background:var(--cFBF9F5,#FBF9F5);border-
       <div style="display:flex;gap:14px">
         ${[['1','Associe le téléphone','Dans les réglages Bluetooth de l’autoradio'],['2','Autorise le partage','Contacts et journal d’appels sur le téléphone'],['3','C’est prêt','Tout apparaît ici automatiquement']].map(x=>`<div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;padding:16px 18px;box-shadow:0 2px 10px rgba(43,42,40,.06)"><span style="display:inline-flex;width:30px;height:30px;border-radius:15px;background:#2F7FD8;color:#fff;font-weight:800;align-items:center;justify-content:center">${x[0]}</span><div style="font-weight:700;font-size:17px;margin-top:10px">${x[1]}</div><div class="m" style="font-size:14px;margin-top:4px;line-height:1.35">${x[2]}</div></div>`).join('')}
       </div>`,
-    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+swr('voice','Saluer au démarrage','Bonjour, anniversaires, trajet habituel ou musique',load('polo-greet')!=='0')+swr('voice','Réveil en disant « Polo »','Dis « Polo » pour parler à l’assistant, sans toucher l’écran',!!(window.PoloNative&&PoloNative.getWake&&PoloNative.getWake()))+`<div style="padding:12px 0 6px"><div style="display:flex;align-items:center;gap:14px">${bub('voice')}<span><b style="display:block;font-size:18px;font-weight:900">Voix de l’assistant</b><small class="m" style="display:block;font-size:14px;font-weight:500;margin-top:2px">Touche une voix pour l’entendre</small></span></div><div data-ttsui><div data-ttsbase><div style="margin-top:16px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c6B665E,#6B665E)">Voix</div><div data-ttsbox style="margin-top:8px"></div></div></div><div data-aiui style="margin-top:20px;padding-top:16px;border-top:1px solid var(--cECE6DA,#ECE6DA)"></div></div>`)}`,
+    'Alertes':`${crd('Sécurité','cam',swr('cam','Alertes radars fixes','Prévient avant chaque radar sur ta route',load('polo-alert-cams')!=='0')+swr('sat','Alerte perte du GPS (tunnel)','Signale quand la position n’est plus suivie',load('polo-alert-gps')!=='0',true))}${crd('Voix','voice',swr('voice','Annonces vocales des alertes','Lit les alertes à voix haute',load('polo-alert-voice')!=='0')+swr('msg','Lire les messages reçus à voix haute','Annonce l’expéditeur et lit le message',load('polo-sms-voice')!=='0')+swr('voice','Saluer au démarrage','Bonjour, anniversaires, trajet habituel ou musique',load('polo-greet')!=='0')+swr('voice','Réveil en disant « Polo »','Dis « Polo » pour parler à l’assistant, sans toucher l’écran',!!(window.PoloNative&&PoloNative.getWake&&PoloNative.getWake()))+`<div style="padding:12px 0 6px"><div data-aiui style="padding-top:16px;border-top:1px solid var(--cECE6DA,#ECE6DA)"></div></div>`)}`,
     'Navigation':`<div style="display:flex;gap:16px;align-items:stretch"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">${crd('Lieux favoris','pin','<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><div class="place" data-place="Maison"></div><div class="place" data-place="Travail"></div></div>')}${crd('Musique pendant les annonces','music','<div style="display:flex;gap:10px;margin-top:8px"><button class="g gm" data-gm="duck" style="height:52px;font-size:17px">Baisser</button><button class="g gm" data-gm="pause" style="height:52px;font-size:17px">Pause</button></div>')}</div><div style="flex:1;min-width:0">${crd('Guidage','nav',swr('nav','Guidage vocal','Annonces « tournez à droite… »',load('polo-navvoice')!=='0')+swr('toll','Éviter les péages','',load('polo-avoid-toll')==='1')+swr('road','Éviter les autoroutes','',load('polo-avoid-motorway')==='1')+swr('tilt','Vue inclinée','',true)+swr('b3d','Bâtiments en 3D','',false,true),'height:100%;box-sizing:border-box')}</div></div>`,
     'À propos':`<span data-name style="display:none"></span><div style="display:flex;gap:14px"><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Véhicule</div><div style="font-size:18px;font-weight:700;margin-top:2px">Volkswagen Polo</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Application</div><div style="font-size:18px;font-weight:700;margin-top:2px">Polo Radio 1.1</div></div><div style="flex:1;background:var(--cFBF9F5,#FBF9F5);border-radius:20px;box-shadow:0 2px 10px rgba(43,42,40,.06);padding:22px 18px;text-align:center;display:flex;flex-direction:column;align-items:center"><div style="color:var(--aC0603F,#C0603F);width:56px;height:56px;border-radius:18px;background:rgba(var(--rgbacc,192,96,63),.12);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="m" style="font-size:14px;margin-top:8px">Écran</div><div style="font-size:18px;font-weight:700;margin-top:2px" data-screen></div></div></div><div style="display:flex;gap:14px"><button class="pbtn" data-os="apps" style="flex:1">Autorisations de l’application</button><button class="pbtn" data-crashlog style="flex:1">Journal d’erreurs</button></div>`,
   };
@@ -2320,39 +2323,13 @@ boot();
         g.gain.setValueAtTime(0,t0+d);g.gain.linearRampToValueAtTime(.22,t0+d+.02);g.gain.exponentialRampToValueAtTime(.001,t0+d+.55);
         o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+.6)})}catch(e){}
   }
-  // phrases de l'assistant autour des messages et du GPS (voix naturelle, féminine ou masculine)
+  // phrases de l'assistant autour des messages et du GPS
   const sur=a=>a?' sur '+a:'';
   const VOICE={intro:(n,a)=>`Tu as un nouveau message de ${n}${sur(a)}.`,ask:'Tu veux répondre ?',lis:'Je t’écoute.',conf:m=>`J’envoie : ${m} ?`,
-    sent:'Message envoyé.',cancel:'Message annulé.',no:'D’accord.',demo:'Bonjour, je serai ta voix pour la route.',
+    sent:'Message envoyé.',cancel:'Message annulé.',no:'D’accord.',
     go:(n,d,h)=>`Itinéraire calculé vers ${n}. ${d}, arrivée prévue à ${h}.`,end:'Tu es arrivé à destination.'};
   const persona=()=>VOICE;
-  // voix naturelles installées, rangées en féminines et masculines (les voix Google se reconnaissent à leur nom)
-  function nuances(v){
-    const fr=((v&&v.voices)||[]).filter(x=>!x.label.includes('·')),isM=x=>/x-(frb|frd)-/.test(x.id);   // France uniquement
-    const pick=(list,g)=>{
-      // seulement les vraies voix installées (3 au plus), sans changer leur ton
-      return list.slice(0,3).map((x,i)=>({id:g+(i+1),g,n:'Voix '+(i+1),v:x.id,p:1}));
-    };
-    // voix naturelles intégrées à l'appli (hors ligne) : en tête, et par défaut
-    const nat=((v&&v.neural)||[]).map(x=>({id:'n'+x.g,g:x.g,n:x.label,v:x.id,p:1}));
-    const out=nat.filter(x=>x.g==='f').concat(pick(fr.filter(x=>!isM(x)),'f'),nat.filter(x=>x.g==='m'),pick(fr.filter(isM),'m'));
-    // japonais : une voix féminine et une masculine (elles liront le français avec leur accent)
-    const ja=(v&&v.ja)||[],jM=x=>/x-(jac|jad)-/.test(x.id),jf=ja.find(x=>!jM(x)),jm=ja.find(jM);
-    if(jf)out.push({id:'jf',g:'j',n:'Féminine',v:jf.id,p:1});
-    if(jm||jf)out.push({id:'jm',g:'j',n:'Masculine',v:(jm||jf).id,p:jm?1:.8});
-    return out.length?out:[{id:'',g:'f',n:'Par défaut',v:'',p:1}];
-  }
-  window.__nuances=nuances;
-  // applique la voix choisie : vaut pour les messages, l'assistant et le GPS
-  function applyStyle(){
-    const N=window.PoloNative;if(!N||!N.setTtsStyle)return;
-    let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){}if(!v.ready)return;
-    // une seule fois : passer à la voix naturelle intégrée, même si une autre voix avait été choisie
-    if(v.neural&&v.neural.length){try{if(!localStorage.getItem('polo-tts-nat')){localStorage.setItem('polo-tts-nat','1');localStorage.removeItem('polo-tts-voice')}}catch(e){}}
-    const ns=nuances(v),nu=ns.find(x=>x.id===ld('polo-tts-voice',''))||ns[0];
-    N.setTtsStyle(nu.v,1,nu.p||1);
-  }
-  window.__persona=persona;window.__applyStyle=applyStyle;
+  window.__persona=persona;
   const endDot=s=>s.trim().replace(/[.!?…]*$/,m=>m||'.');
   const readText=c=>c.isMsg?endDot(persona().intro(c.name,c.app!==c.name?c.app:'')+' '+c.last):endDot(c.app+'. '+c.name+'. '+c.last);
   window.__readNotif=c=>speakOut(c.app,readText(c));
@@ -2831,25 +2808,11 @@ async function playMusic(raw){
 </script>
 <script>
 (function(){
-  // voix de l'assistant : féminine ou masculine (Réglages → Alertes → Voix)
-  const lget=(k,d)=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}};
-  const lset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-  function fillTts(ui){
-    const N=window.PoloNative;if(!window.__nuances)return;
-    // le panneau Alertes est devenu plus haut que l'écran : on le rend défilable
-    const pnl=ui.closest('.pnl');if(pnl&&!pnl.dataset.sc){pnl.dataset.sc='1';pnl.style.overflowY='auto';pnl.style.scrollbarWidth='none';pnl.style.overscrollBehavior='contain'}
-    let v={};try{v=JSON.parse(N.ttsVoices())}catch(e){return}
-    const base=lget('polo-tts-voice','');
-    const sig=JSON.stringify([v,base]);if(ui.dataset.sig===sig)return;ui.dataset.sig=sig;
-    const chip=(lab,on,attr)=>`<button ${attr} style="border:0;cursor:pointer;font:600 15px system-ui,sans-serif;padding:9px 16px;border-radius:18px;${on?'background:var(--aC0603F,#C0603F);color:#fff;box-shadow:0 4px 12px rgba(var(--rgbacc,192,96,63),.35)':'background:var(--cF1EDE4,#F1EDE4);color:var(--c2B2A28,#2B2A28)'}">${lab}</button>`;
-    const ns=window.__nuances(v),curN=(ns.find(x=>x.id===base)||ns[0]).id;
-    const line=(g,lab)=>{const l=ns.filter(x=>x.g===g);return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px"><span style="width:118px;flex:none;font-size:15px;font-weight:700">${lab}</span>${l.length?l.map(x=>chip(x.n,x.id===curN,`data-tv="${x.id.replace(/"/g,'&quot;')}"`)).join(''):'<small class="m" style="font-size:14px">Aucune voix installée sur l’autoradio</small>'}</div>`};
-    ui.querySelector('[data-ttsbox]').innerHTML=!v.ready?'<small class="m" style="font-size:14px">Chargement des voix…</small>':line('f','Féminines')+line('m','Masculines')+line('j','Japonais');
-    ui.querySelectorAll('[data-tv]').forEach(b=>b.onclick=()=>{lset('polo-tts-voice',b.dataset.tv);window.__applyStyle();speakOut('Assistant',window.__persona().demo);ui.dataset.sig='';fillTts(ui)});
-  }
   // intelligence de l'assistant : clé Gemini gratuite, collée depuis Chrome sur l'autoradio
   function fillAi(ui){
     const N=window.PoloNative;if(!N||!N.aiStatus)return;
+    // le panneau Alertes est plus haut que l'écran : on le rend défilable
+    const pnl=ui.closest('.pnl');if(pnl&&!pnl.dataset.sc){pnl.dataset.sc='1';pnl.style.overflowY='auto';pnl.style.scrollbarWidth='none';pnl.style.overscrollBehavior='contain'}
     let st={};try{st=JSON.parse(N.aiStatus())}catch(e){}
     if(ui.dataset.typing)return;
     const sig=String(!!st.key)+(ui.dataset.msg||'');if(ui.dataset.sig===sig)return;ui.dataset.sig=sig;
@@ -2873,8 +2836,8 @@ async function playMusic(raw){
     q('[data-aipaste]').onclick=()=>{const r=N.aiPasteKey();ui.dataset.msg=msgOf(r);
       if(r==='ok'&&window.__aiReset)window.__aiReset();ui.dataset.sig='';fillAi(ui)};
   }
-  function updTts(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-ttsui]').forEach(u=>{if(u.getClientRects().length)fillTts(u)});r.querySelectorAll('[data-aiui]').forEach(u=>{if(u.getClientRects().length)fillAi(u)})})}
-  if(window.PoloNative&&window.PoloNative.ttsVoices)setInterval(()=>{if(!document.hidden)updTts()},1000);
+  function updAi(){document.querySelectorAll('.screen').forEach(h=>{const r=h.shadowRoot;if(!r)return;r.querySelectorAll('[data-aiui]').forEach(u=>{if(u.getClientRects().length)fillAi(u)})})}
+  if(window.PoloNative&&window.PoloNative.aiStatus)setInterval(()=>{if(!document.hidden)updAi()},1000);
   function phoneRow(row){
     let lk={};try{lk=JSON.parse(window.PoloNative.phoneLink())}catch(e){return ''}
     const code=`<span style="letter-spacing:3px;font-variant-numeric:tabular-nums">${lk.code||'——'}</span>`;
